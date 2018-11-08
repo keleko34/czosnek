@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Testing</title>
+    <link rel="stylesheet" href="/node_modules/mocha/mocha.css" />
+  </head>
+  <body>
+    <div class="test">
+      <div class="section">Unit Tests</div>
+      <div id="mocha"></div>
+      <div id="messages"></div>
+      <div id="fixtures"></div>
+    </div>
+    <div class="performance">
+      <div class="section"><a href="#tasks">Benchmark Tests</a></div>
+    </div>
+    <style>
+      .test_subjects {
+        margin-left: 50px;
+      }
+      .test_subject__element__child {
+        margin-left: 20px;
+      }
+      .test, .performance {
+        margin: 30px 50px;
+      }
+      .section {
+        font-size:24px;
+        text-decoration: underline;
+        color: blue;
+        font-family: sans-serif;
+      }
+      #mocha {
+        margin-top:10px;
+      }
+    </style>
+    <script type="text/javascript" src="/init.min.js"></script>
+    <script type="text/javascript" src="/node_modules/lodash/lodash.min.js"></script>
+    <script type="text/javascript" src="/node_modules/platform/platform.js"></script>
+    <script type="text/javascript" src="/node_modules/benchmark/benchmark.js"></script>
+    <script type="text/javascript" src="/node_modules/mocha/mocha.js"></script>
+    <script type="text/javascript" src="/node_modules/chai/chai.js"></script>
+    <script type="text/javascript" src="/node_modules/sinon/pkg/sinon.js"></script>
+    <script type="text/javascript" src="/node_modules/sinon-chai/lib/sinon-chai.js"></script>
+    
+    <!-- unit tests -->
+    <script type="text/javascript" src="/test/tests/unit.js"></script>
+    
+    <!-- performance -->
+    <script type="text/javascript" src="/test/tests/performance.js"></script>
+  </body>
+</html>
