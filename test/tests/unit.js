@@ -67,6 +67,6 @@ function trackTestTime(key)
 
 (function(describe,it,expect,spy){
   /* mocha tests */
-  
+  standardBinds(describe, it, expect);
   mocha.run();
 }(describe,it,chai.expect,sinon.spy));

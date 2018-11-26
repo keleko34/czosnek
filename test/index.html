@@ -11,6 +11,7 @@
       <div id="messages"></div>
       <div id="fixtures"></div>
     </div>
+    <div class="test-div"></div>
     <div class="performance">
       <div class="section"><a href="#tasks">Benchmark Tests</a></div>
     </div>
@@ -34,7 +35,9 @@
         margin-top:10px;
       }
     </style>
-    <script type="text/javascript" src="/init.min.js"></script>
+    <script type="text/javascript" src="/node_modules/pikantny/init.min.js"></script>
+    <script type="text/javascript" src="/node_modules/frytki/init.min.js"></script>
+    <script type="text/javascript" src="/init.js"></script>
     <script type="text/javascript" src="/node_modules/lodash/lodash.min.js"></script>
     <script type="text/javascript" src="/node_modules/platform/platform.js"></script>
     <script type="text/javascript" src="/node_modules/benchmark/benchmark.js"></script>
@@ -44,6 +47,7 @@
     <script type="text/javascript" src="/node_modules/sinon-chai/lib/sinon-chai.js"></script>
     
     <!-- unit tests -->
+    <script type="text/javascript" src="/test/tests/unit/standardBinds.js"></script>
     <script type="text/javascript" src="/test/tests/unit.js"></script>
     
     <!-- performance -->

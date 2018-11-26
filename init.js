@@ -1,57 +1,14 @@
-/* Make this library not depend on frytki if it does not exist but prefer it if it does, add observables to necessary items, make data observable */
-
 window.czosnek = (function(){
-  
-  /* PIKANTNY/FRYTKI LOAD */
-  /* REGION */
-  
-  var __hasPikantny = (window.pikantny !== undefined),
-      __hasFrytki = (window.frytki !== undefined);
-  
-  if(!__hasPikantny)
-  {
-    /* Attempt to load it pikantny */
-    var script = document.createElement('script');
-    script.setAttribute('src','/node_modules/pikantny/init.min.js');
-    script.setAttribute('type','text/javascript');
-    script.onload = function(){
-      if(!window.pikantny) return pikantnyError();
-      __hasPikantny = true;
-    }
-    script.onerror = pikantnyError;
-    document.head.appendChild(script);
-  }
-  
-  function pikantnyError()
-  {
-    console.error("Pikantny library failed to load, either please `npm i pikantny` or include this library in your project loading order before the czosnek library");
-  }
-  
-  
-  
-  /* ENDREGION */
-  
   /* SCOPED LOCALS */
   /* REGION */
-
+  
       /* start bind chars */
-  var __start = '{{',
-      
-      /* end bind chars */
-      __end = '}}',
-      
-      /* seperator for bind names and methods */
-      __pipe = '|',
-      
-      /* locally stored templates */
-      __templates = {},
+  var __templates = {},
       
       /* events associated with the dom */
       __domEvents = Object.keys(HTMLElement.prototype).filter(function(v){return v.indexOf('on') === 0}),
       
-      __slice = Array.prototype.slice.call,
-      
-      __loopEvent = [];
+      __slice = Array.prototype.slice;
   /* ENDREGION */
   
   /* REGEX RULES */
@@ -64,55 +21,60 @@ window.czosnek = (function(){
       __matchText = /(\{\{.*?\}\})/g,
       __splitText = /(\{\{.*?\}\})/g,
       __replaceKey = /[\s\{\}\>]|(\|(.*))/g,
+      __matchFilters = /(\{\{(.*?)\|(.*?)\}\})/g,
       __replacefilters = /(.*?)\||[\s\{\}]/g,
       __matchVFilters = /(\()(.*?)(\))/g,
       __replaceVFilters = /[\(\)]/g,
       __matchStoreFilter = /(\[)(.*?)(\])/g,
       __replaceStoreFilter = /[\[\]\~\+\-]/g,
       __matchForText = /((.*?)for)(.*?)(loop(.*))/g,
-      __replaceForKey = /((.*?)for\s)(\sloop(.*))/g,
+      __replaceForKey = /((.*?)for\s)|(\sloop(.*))/g,
       __replaceForComponent = /(.*?loop\s)|(\|(.*))|[\s]/g,
       __matchInsert = /(\{\{(\s*)\>(.*?)(\}\}))/g,
-      __replaceTag = /[(\<\\)\>]/g
+      __replaceEndingTag = /(<(?!input|img)(.*?) (.*?)\/>)/g,
+      __replaceTag = /[(\<\\)\>]/g,
+      __replaceNodeName = /(\<\/?\{\{(.*?)\>)/g,
+      __replaceNodeBind = /(<({{.*?}})(.*))/g;
       
   /* ENDREGION */
   
   /* OBJECT CLASSES */
   /* REGION */
   
-  /* all params after text are passed the same for each bind in a single instance (string) */
-  function bindObject(key, text, type, id, bindText, listener, localAttr, local, node, binds)
+  function attachExtensions(root)
   {
-    /* Individual Bind */
+    this.root = root;
+    this.pointers = {};
+  }
+  
+  function mapObject(text, mapText, property, listener, local, localAttr, node, maps, localComponent, isAttr, isFor, id)
+  {
+    this.key = (isFor ? getForKey(text) : getKey(text));
     this.text = text;
-    this.key = key;
-    this.type = type;
+    this.mapText = mapText;
     this.keyLength = this.key.split('.').length;
     this.localKey = this.key.split('.').pop();
     this.filters = parseFilterTypes(getfilters(text));
-    this.component = (this.type === 'for' ? getForComponent(text)[1] : undefined);
-    this.isDirty = (type !== 'for' && bindText.match(__matchText).length !== 1);
-    this.isAttr = (['for', 'textContent'].indexOf(type) === -1);
-    this.id = id;
-    
-    /* Shared Pointers */
-    this.isComponent = (node instanceof HTMLUnknownElement || node.tagName.indexOf('-') !== -1);
-    this.bindText = bindText;
+    this.forComponent = (isFor ? getForComponent(text) : undefined);
+    this.forId = id;
+    this.isDirty = (mapText.length !== 1);
     this.listener = listener;
-    this.attr = listener;
-    this.localAttr = localAttr;
+    this.property = property;
     this.local = local;
+    this.localAttr = localAttr;
+    this.localComponent = localComponent;
     this.node = node;
-    this.binds = binds;
-    this.isEvent = (this.isAttr && __domEvents.indexOf(localAttr) !== -1);
+    this.maps = maps;
+    this.isEvent = (!!isAttr && __domEvents.indexOf(localAttr) !== -1);
     this.isInput = (node.tagName === 'INPUT');
-    this.isRadio = (this.isInput && ['radio','checkbox'].indexOf(node.type) !== -1);
+    this.isRadio = (!!this.isInput && ['radio','checkbox'].indexOf(node.type) !== -1);
   }
   
   /* ENDREGION */
   
   /* DESCRIPTORS */
   /* REGION */
+  
   function setDescriptor(value,writable,redefinable,enumerable)
   {
     return {
@@ -123,18 +85,6 @@ window.czosnek = (function(){
     }
   }
   
-  function setPointer(obj,key,redefinable,enumerable)
-  {
-    return {
-      get:function(){return obj.get(key);},
-      set:function(v)
-      {
-        (this.stop ? obj.stop() : obj)[key] = v;
-      },
-      configurable:!!redefinable,
-      enumerable:!!enumerable
-    }
-  }
   /* ENDREGION */
   
   /* BIND SPLITTING METHODS */
@@ -147,8 +97,7 @@ window.czosnek = (function(){
   */
   function splitText(str)
   {
-    var split = str.split(__splitText);
-    return (split.pop() || split);
+    return str.split(__splitText).filter(Boolean);
   }
   
   /* takes a bind and returns just the name/key
@@ -188,7 +137,7 @@ window.czosnek = (function(){
   */
   function getfilters(str)
   {
-    return str.replace(__replacefilters,'').split(',');
+    return (str.match(__matchFilters) ? str.replace(__replacefilters,'').split(',') : []);
   }
   
   /* takes a filters array and parses out specials, eg: (vmFilter),[(~|+|-)storename]
@@ -221,9 +170,9 @@ window.czosnek = (function(){
       }
       else if(filter.match(__matchStoreFilter))
       {
-        if(filter.indexOf('~') !== -1) filterObj.model.push(filter.replcae(__replaceStoreFilter, ''));
-        if(filter.indexOf('+') !== -1) filterObj.local.push(filter.replcae(__replaceStoreFilter, ''));
-        if(filter.indexOf('-') !== -1) filterObj.session.push(filter.replcae(__replaceStoreFilter, ''));
+        if(filter.indexOf('~') !== -1) filterObj.model.push(filter.replace(__replaceStoreFilter, ''));
+        if(filter.indexOf('+') !== -1) filterObj.local.push(filter.replace(__replaceStoreFilter, ''));
+        if(filter.indexOf('-') !== -1) filterObj.session.push(filter.replace(__replaceStoreFilter, ''));
       }
       else
       {
@@ -238,6 +187,11 @@ window.czosnek = (function(){
   
   /* PUBLIC METHODS */
   /* REGION */
+  function isUnknown(node)
+  {
+    return ((node instanceof HTMLUnknownElement) || (node.nodeName.indexOf('-') !== -1))
+  }
+  
   function getUnknown(html)
   {
     var matched = html.match(__reNodes),
@@ -265,11 +219,18 @@ window.czosnek = (function(){
   {
     if(__templates[title] === undefined)
     {
-      __templates[title] = template;
+      __templates[title] = template
+      
+      /* replace single line elements <div /> to have their correct ending tag </div>. ignores inputs and img tags */
+      .replace(__replaceEndingTag, "<$2 $3></$2>")
+      .replace(/( \>)/g, '>')
+      
+      /* replaces <{{bind}}> tags as comments */
+      .replace(__replaceNodeName, '<!--$1-->');
     }
     else
     {
-      console.error("Class: KonnektMP Method: 'register', A template by the name %o already exists",name);
+      console.error("ERR: A template by the name %o already exists",name, new Error().stack);
     }
     return this;
   }
@@ -279,88 +240,52 @@ window.czosnek = (function(){
     return (__templates[title] !== undefined);
   }
   
-  /* Inserts a data set into the html and does not create a bind */
-  function insertData(html, data)
+  /* creates the bind objects mapped against the text */
+  function map(node, maps, extensions, localComponent)
   {
-    var text = html,
-        inserts = text.match(__matchInsert),
-        x = 0,
-        len = inserts.length,
-        insert,
-        key,
-        filters,
-        value;
-    
-    for(x;x<len;x++)
+    /* FIRST INITIAL CALL */
+    if(!extensions) 
     {
-      insert = inserts[x],
-      key = insert.replace(__replaceKey, '');
-      filters = parseFilterTypes(getfilters(insert));
-      value = (data.get ? data.get(key) : data[key]);
-      text = text.replace(insert, runThroughFilters(value, filters, data.filters.filters));
-    }
-    
-    return text;
-  }
-  
-  function loopMap(childNodes, binds, root)
-  {
-    var x = 0,
-        len = childNodes.length,
-        child,
-        extensions;
-    
-    for(x;x<len;x++)
-    {
-      child = childNodes[x];
-      extensions = child.__pikantnyExtensions__;
-      /* block from reading sub components, block comment type nodes */
-      if(!extensions.mapper && child.nodeType !== 8)
-      {
-        extensions.mapper = {};
-        extensions.mapper.root = root;
-        extensions.mapper.maps = binds;
-        
-        if(child.nodeType === 3)
-        {
-          getTextBinds(child,binds);
-        }
-        else
-        {
-          getAttrBinds(child,binds);
-          if(child.childNodes && child.childNodes.length !== 0)
-          {
-            loopMap(child.childNodes, binds);
-          }
+      Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(node), '__czosnekExtensions__', false, false));
+      extensions = node.__czosnekExtensions__;
+      maps =  {
+        standards: [],
+        inserts: [],
+        loops: [],
+        nodes: [],
+        pointers: {
+          standards: [],
+          loops: [],
+          nodes: []
         }
       }
     }
     
-    return binds;
-  }
-  
-  function map(node)
-  {
-    return loopMap([node], {}, node);
-  }
-  
-  function addLoopListener(func)
-  {
-    __loopEvent.push(func);
-    
-    return this;
-  }
-  
-  function removeLoopListener(func)
-  {
-    var stringFunc = func.toString(),
+    var childNodes = node.childNodes,
         x = 0,
-        len = __loopEvent.length;
+        len = childNodes.length,
+        localNode,
+        child;
+    
+    /* LOOP CHILDREN NODES INCLUDING TEXT AND COMMENT NODES */
     for(x;x<len;x++)
     {
-      if(__loopEvent[x].toString() === stringFunc);
+      child = childNodes[x];
+      
+      /* LOCAL REAL NODE (NOT TEXT OR COMMENT NODES) */
+      localNode = ([3,8].indexOf(child.nodeType) !== -1 ? child.parentElement : child);
+      
+      /* ONLY MAP IF THIS IS A LOCAL COMPONENT */
+      if(!child.__czosnekExtensions__)
+      {
+        Object.defineProperty(child, '__czosnekExtensions__', setDescriptor(new attachExtensions(extensions.root), '__czosnekExtensions__', false, false));
+        getMap(child, localNode, maps, (isUnknown(child) ? child : localComponent));
+        len = childNodes.length;
+        if(child.childNodes && child.childNodes.length) map(child, maps, extensions, (isUnknown(child) ? child : localComponent));
+      }
     }
-    return this;
+    
+    return maps;
   }
   
   /* ENDREGION */
@@ -368,534 +293,183 @@ window.czosnek = (function(){
   /* BIND HELPERS */
   /* REGION */
   
-  function runThroughBinds(binds)
+  function getMap(child, localNode, maps, localComponent)
   {
-    var bind,
-        data,
-        text = '',
-        x = 0,
-        len = binds.length;
-    
-    for(x;x<len;x++)
-    {
-      bind = binds[x];
-      data = bind.data;
-      if(typeof bind === 'string')
-      {
-        text += bind;
-      }
-      else
-      {
-        if(data === undefined)
-        {
-          text += bind.text;
-        }
-        else
-        {
-          text += runThroughFilters(data[bind.localkey],bind.filters.filters,data.filters);
-        }
-      }
-      
-      return text;
-    }
-    
-    return text;
-  }
-  
-  function runThroughFilters(val, filters, filterFuncs)
-  {
-    var returnValue = val,
-        x = 0,
-        len = filters.length;
-    
-    for(x;x<len;x++)
-    {
-      returnValue = (filterFuncs[filters[x]] ? filterFuncs[filters[x]](returnValue) : returnValue);
-    }
-    
-    return returnValue;
-  }
-  
-  function runThroughForFilters(val, filters, filterFuncs, index)
-  {
-    var returnValue,
-        x = 0,
-        len = filters.length;
-    
-    for(x;x<len;x++)
-    {
-      returnValue = (filterFuncs[filters[x]] ? filterFuncs[filters[x]](val,index)  : returnValue)
-    }
-    return returnValue;
-  }
-  
-  function insertHTML(node, html)
-  {
-    var stop = node.stop,
-        x = 0,
-        len = html.length;
-    
-    for(x;x<len;x++)
-    {
-      stop().appendChild(html[x]);
-    }
-  }
-  
-  function addBind(node, binds, title, text, local)
-  {
-    var isText = (title === 'textContent'),
-        bindText = splitText(text),
-        type = (isText ? (text.match(__matchForText) ? 'for' : 'text') : 'attr'),
-        listener = title,
-        localAttr = (isText ? title : 'value'),
-        isEvent = (!isText && __domEvents.indexOf(title) !== -1),
-        localBinds = [],
-        
-        /* loop */
-        x = 0,
-        len = bindText.length,
-        item,
-        key,
-        bind;
-    
-    if(isEvent) node.stop().removeAttribute(title);
-    
-    /* TODO loop binds */
-    if(type === 'for')
-    {
-      item = text;
-      key = getForKey(text);
-      return this;
-    }
-    
-    for(x;x<len;x++)
-    {
-      item = bindText[x]
-      if(item.match(__matchText))
-      {
-        key = getKey(item);
-        bind = new bindObject(key, item, type, x, bindText, listener, localAttr, local, node, localBinds);
-        localBinds.push(bind);
-        bindText[x] = bind;
-
-        if(!binds[key]) binds[key] = [];
-
-        binds[key].push(bind);
-      }
-    }
-  }
-  
-  function getTextBinds(node, binds)
-  {
-    /* the actual text */
-    var text = node.textContent,
-        title = 'textContent';
-    
-    if(text.match(__matchText)) addBind(node.parentElement, binds, title, text, node)
-  }
-  
-  function getAttrBinds(node, binds)
-  {
-    /* all attributes of the node */
-    var attrs = __slice(node.attributes),
-        
-        /* if the parent element is a component then we need to treat it as a single instance map */
-        x = 0,
-        len = attrs.length,
+    var mapText = [],
+        toMap = maps,
+        sibling,
         text,
-        title;
+        item,
+        x = 0,
+        len;
     
-    for(x;x<len;x++)
+    switch(child.nodeType)
     {
-      text = attrs[x].value;
-      title = attrs[x].name;
-      
-      if(text.match(__matchText)) addBind(node, binds, title, text, attrs[x]);
-    }
-  }
-  
-  function getLayer(obj, key)
-  {
-    var __scopeArray = (typeof key === 'string' ? key.split('.') : [key]),
-        __retObj = obj,
-        __len = __scopeArray.length,
-        __x = 0;
-    
-    for(__x;__x<(__len - 1);__x++)
-    {
-      if(__retObj[__scopeArray[__x]] === 'undefined')
-      {
-        if(__retObj.set)
+      /* TEXT NODE, POSSIBLE MAPS: FOR, STANDARD, INSERT, POINTER */
+      case 3:
+        text = child.textContent;
+        mapText = splitText(text);
+        len = mapText.length;
+        for(x;x<len;x++)
         {
-          __retObj.set(__scopeArray[__x], {});
+          item = mapText[x];
+          
+          /* INSERT TYPE */
+          if(item.match(__matchInsert))
+          {
+            maps.inserts.push(new mapObject(item, mapText, 'innerHTML', undefined, child, 'textContent', localNode, maps, localComponent));
+          }
+          else if(item.match(__matchForText))
+          {
+            /* POINTER FOR TYPE */
+            if(localComponent) toMap = maps.pointers;
+            
+            if(mapText.length === 1) 
+            {
+              toMap.loops.push(new mapObject(item, mapText, 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true));
+            }
+            else
+            {
+              console.error('ERR: loop binds can not include adjacent content,', text, 'in', localNode);
+            }
+          }
+          else if(item.match(__matchText))
+          {
+            /* POINTER STANDARD TYPE */
+            if(localComponent) toMap = maps.pointers;
+            
+            toMap.standards.push(new mapObject(item, mapText, 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent))
+          }
         }
-        else
+        break;
+        
+      /* COMMENT NODE, POSSIBLE MAPS: NODE, ATTRIBUTE NAME(future) */
+      case 8:
+        text = child.textContent;
+        mapText = [text.replace(__replaceNodeBind, '$2')];
+        item = mapText[0];
+        if(item.match(__matchText))
         {
-           __retObj[__scopeArray[__x]] = {};
+          var key = getKey(item),
+              reg = new RegExp('(\<\/\{\{\s?'+key+'(.*?)\>)','g'),
+              nodeChildren = [],
+              next;
+          
+          if(localComponent) toMap = maps.pointers;
+          toMap.nodes.push(new mapObject(item, mapText, 'innerHTML', 'html', child, 'node', localNode, maps, localComponent));
+          
+          sibling = child.nextSibling;
+          
+          while(!sibling.textContent.match(reg))
+          {
+            next = sibling.nextSibling;
+            nodeChildren.push(sibling);
+            localNode.removeChild(sibling);
+            
+            var div = document.createElement('div');
+            div.appendChild(sibling);
+            map(div, maps, child.__czosnekExtensions__, item);
+            sibling = next;
+          }
+          localNode.removeChild(child);
+          localNode.removeChild(sibling);
+          toMap.nodes[(toMap.nodes.length - 1)].nodeChildren = nodeChildren;
         }
-      }
-      else if(__retObj[__scopeArray[__x]] !== undefined) 
-      {
-        if(typeof __retObj[__scopeArray[__x]] === 'object') __retObj = __retObj[__scopeArray[__x]];
-      }
-    }
-    
-    return __retObj;
-  }
-  
-  function getLocalKey(key)
-  {
-    return (typeof key === 'string' ? key.substring(key.lastIndexOf('.') + 1, key.length) : key.toString());
-  }
-  
-  /* TODO loop binds */
-  function loopItemChange()
-  {
-    
-  }
-  
-  /* ENDREGION */
-  
-  /* STORAGE */
-  /* REGION */
-  
-  function storageGet(type, key)
-  {
-    if(window[type]) return window[type].getItem(key);
-  }
-  
-  function storageSet(type, value, keys)
-  {
-    var x = 0,
-        len = keys.length;
-    
-    if(len && window[type])
-    {
-      for(x;x<len;x++)
-      {
-        window[type].setItem(keys[x],value);
-      }
-    }
-  }
-  
-  function getModel(key)
-  {
-    return storageGet('model', key);
-  }
-  
-  function setModel(value, keys)
-  {
-    return storageSet('model', value, keys);
-  }
-  
-  function getLocal(key)
-  {
-    return storageGet('localStorage', key);
-  }
-  
-  function setLocal(value, keys)
-  {
-    return storageSet('localStorage', value, keys);
-  }
-  
-  function getSession(key)
-  {
-    return storageGet('sessionStorage', key);
-  }
-  
-  function setSession(value, keys)
-  {
-    return storageSet('sessionStorage', value, keys);
-  }
-  
-  /* ENDREGION */
-  
-  /* BINDING PROTOTYPES */
-  /* REGION */
-  
-  /* connected listener */
-  function dataListener(e)
-  {
-    if(e.event === 'delete')
-    {
-      this.unsync();
-    }
-    else
-    {
-      this.setDom(e.value);
-    }
-  }
-  
-  /* connected listener */
-  function domListener(e)
-  {
-    this.setData(e.value);
-  }
-  
-  function addSetDescriptor(obj, key)
-  {
-    var __value = obj[key],
-        __set = function(v)
-        {
-          __value = v;
-          dataListener.call(this, {value: v, type:(v === undefined ? 'delete' : 'set')});
-        };
-    Object.defineProperty(obj, key, {
-      set: __set,
-      get: function(){ return __value },
-      enumerable: true,
-      configurable: true
-    })
-  }
-  
-  function connect(data)
-  {
-    var dataIsOfFrytkiType = (__hasFrytki && (this.data instanceof frytki));
-    
-    this.data = (data || this.data || {});
-    this.localkey = this.key;
-    
-    if(this.localkey.indexOf('.') !== -1)
-    {
-      this.data = getLayer(this.data);
-      this.localkey = getLocalKey(this.key);
-    }
-    
-    /* TODO loop binds */
-    if(this.type === 'for')
-    {
-      
-      return this;
-    }
-    
-    /* if object is frytki use local commands */
-    if(dataIsOfFrytkiType)
-    {
-      this.data.addEventListener(this.localkey, dataListener.bind(this));
-      if(!this.isDirty) this.node.addEventListener(this.listener + "update",domListener.bind(this));
-    }
-    else
-    {
-      addSetDescriptor(this.data, this.localkey);
-      
-      if(!this.isDirty) this.node.addEventListener(this.listener + "update",domListener.bind(this));
-    }
-    
-    var dataStopped = (dataIsOfFrytkiType ? this.data.stop() : this.data);
-    
-    /* first check storage to data */
-    if(this.filters.model && this.filters.model.length !== 0)
-    {
-      dataStopped[this.localkey] = getModel(this.key);
-    }
-    else if(this.filters.session && this.filters.session.length !== 0)
-    {
-      dataStopped[this.localkey] = getModel(this.key);
-    }
-    else if(this.filters.local && this.filters.local.length !== 0)
-    {
-      dataStopped[this.localkey] = getModel(this.key);
-    }
-    
-    if(this.isEvent)
-    {
-      this.node.stop()[this.attr] = this.data[this.localkey];
-    }
-    
-    else if(this.localkey === 'innerHTML')
-    {
-      this.node.stop().innerHTML = '';
-      insertHTML(this.node, this.data.innerHTML);
-    }
-    else
-    {
-      this.local.stop()[this.localAttr] = runThroughBinds(this.bindText);
-      if(this.isInput && ['value','checked'].indexOf(this.attr) !== -1) this.node.stop()[this.attr] = this.data[this.localkey];
-    }
-  }
-  
-  function reconnect()
-  {
-    /* TODO loop binds */
-    if(this.type === 'for')
-    {
-      
-      return this;
-    }
-    
-    if(__hasFrytki && (this.data instanceof frytki))
-    {
-      this.data.removeEventListener(this.localKey, dataListener);
-      this.data.addEventListener(this.localkey, dataListener.bind(this));
-    }
-    else
-    {
-      addSetDescriptor(this.data, this.localkey);
-    }
-    
-    if(!this.isDirty)
-    {
-      this.node.removeEventListener(this.listener + "update",domListener);
-      this.node.addEventListener(this.listener + "update",domListener.bind(this));
-    }
-  }
-  
-  function setData(value)
-  {
-    var data = this.data,
-        filters = this.filters;
-    /* run through vmFilters + post set storage and model filters */
-    value = runThroughFilters(value,filters.vmFilters,data.filters);
-    if(data.stop) 
-    { 
-      data.stop().set(this.key,value);
-    }
-    else
-    {
-      data[this.key] = value;
-    }
+        break;
         
-    setModel(filters.model,value);
-    setSession(filters.session,value);
-    setLocal(filters.local,value);
-    
-    return this;
-  }
-  
-  function setDom(value)
-  {
-    var data = this.data,
-        filters = this.filters,
-        key = this.key,
-        attr = this.attr;
-    
-    /* run through Standard filters + pre set storage and model filters */
-    setModel(filters.model,value);
-    setSession(filters.session,value);
-    setLocal(filters.local,value);
-    
-    /* tie actual function methods */
-    if(this.isEvent)
-    {
-      this.node.stop()[attr] = data.get(key);
-    }
-    
-    /* set actual value of an input */
-    else if(this.isInput && (['value','checked'].indexOf(attr) !== -1))
-    {
-      this.node.stop()[attr] = data.get(key);
-    }
-    
-    /* pass nodes into the binded location */
-    else if(key === 'innerHTML')
-    {
-      /* first clear binding text, then append nodes */
-      this.node.stop().innerHTML = "";
-      insertHTML(this.node,data.innerHTML);
-      
-      /* release pointers */
-      data.innerHTML = null;
-    }
-    
-    /* standard string set */
-    else
-    {
-      this.local.stop()[this.localAttr] = runThroughBinds(this.bindText);
-    }
-    return this;
-  }
-  
-  /* TODO loop binds */
-  function setLoop(items, type)
-  {
-    /* items can be a single key or an array of items */
-    var node = this.node;
-    
-    switch(type)
-    {
-      /* DELETE */
-      case 0:
-        node.removeChild(node.children[items]);
-        node.removeEventListener(items, loopItemChange);
-        node.data.stop().removePointer(items);
-        break;
-      /* CREATE */
-      case 1:
-      
-        break;
-      /* SINGLE SET */
-      case 2:
-        
-        break;
-      /* ALL ITEMS CHANGED */
+      /* NORMAL DOM NODE, POSSIBLE MAPS: STANDARD, INSERT, POINTER */
       default:
-      
+        
+        /* LOOP ATTRIBUTES */
+        var attrs = __slice.call(child.attributes),
+            i = 0,
+            lenn = attrs.length,
+            title;
+        
+        for(i;i<lenn;i++)
+        {
+          text = attrs[i].value;
+          title = attrs[i].name;
+          mapText = splitText(text);
+          len = mapText.length;
+          for(x;x<len;x++)
+          {
+            item = mapText[x];
+            
+            /* INSERT TYPE */
+            if(item.match(__matchInsert))
+            {
+              maps.inserts.push(new mapObject(item, mapText, title, undefined, attrs[i], 'value', localNode, maps, localComponent, true));
+            }
+            else if(item.match(__matchText))
+            {
+              /* POINTER TYPE */
+              if(localComponent) toMap = maps.pointers;
+              
+              toMap.standards.push(new mapObject(item, mapText, title, title, attrs[i], 'value', localNode, maps, localComponent, true));
+            }
+          }
+        }
         break;
     }
   }
-  
-  /* Removes all object pointers so GC can collect them easier */
-  function unsync()
-  {
-    this.bindText = null;
-    this.data = null;
-    this.binds = null;
-    this.node = null;
-    this.local = null;
-    return this;
-  }
-  
-  Object.defineProperties(bindObject.prototype, {
-    connect: setDescriptor(connect, false, true),
-    reconnect: setDescriptor(reconnect, false, true),
-    setData: setDescriptor(setData, false, true),
-    setDom: setDescriptor(setDom, false, true),
-    setLoop: setDescriptor(setLoop, false, true),
-    unsync: setDescriptor(unsync, false, true),
-    getModel: setDescriptor(getModel, false, true),
-    setModel: setDescriptor(setModel, false, true),
-    getLocal: setDescriptor(getLocal, false, true),
-    setLocal: setDescriptor(setLocal, false, true),
-    getSession: setDescriptor(getSession, false, true),
-    setSession: setDescriptor(setSession, false, true)
-  })
   
   /* ENDREGION */
   
   /* CONSTRUCTOR */
   /* REGION */
   function Czosnek(node)
-  {
+  {    
     /* Name of the component */
-      this.name = node.tagName.toLowerCase();
-      
-      if(!__templates[this.name]) console.error("COMPONENT "+this.name+" Does not exist, make sure to create it");
+    this.name = node.tagName.toLowerCase();
+
+    if(!__templates[this.name]) console.error("ERR: Component "+this.name+" does not exist, make sure to create it", new Error().stack);
+
+    /* template of the component */
+    this.template = __templates[this.name] || '<div class="missing_component">Unknown Component</div>';
+
+    /* original node */
+    this.node = node;
+
+    /* SETUP PARAMS */
+    /* Fetch all possible params for this component: Attributes, pointers, html */
+    this.params = __slice.call(this.node.attributes).reduce(function(o, v) {
+      return ((o[v.name] = v.value) && o);
+    },{});
     
-      /* template of the component */
-      this.template = __templates[this.name] || '<div class="missing_component">Unknown Component</div>';
+    if(this.node.__czosnekExtensions__) this.pointers = this.node.__czosnekExtensions__.pointers;
+    
+    this.innerHTML = this.node.innerHTML;
 
-      /* original node */
-      this.node = node;
-
-      /* wrapper div for placing components inside */
-      this.wrapper = document.createElement('div');
+    /* EXPAND NODE */
+    var wrapper = document.createElement('div');
+    wrapper.innerHTML = this.template;
+    
+    if(wrapper.children.length !== 1) return console.error('ERR: Component must be wrapped in a single element,', wrapper.children.length, 'nodes in', this.name, new Error().stack);
+    
+    this.expanded = wrapper.children[0];
+    
+    this.maps = map(this.expanded);
   }
   
-  Object.defineProperties(Czosnek.prototype,{
-      register:setDescriptor(register, false, true),
-      isRegistered:setDescriptor(isRegistered, false, true),
-      getUnknown:setDescriptor(getUnknown, false, true),
-      map:setDescriptor(map, false, true),
-      insert:setDescriptor(insertData, false, true),
-      getModel:setDescriptor(getModel, false, true),
-      setModel:setDescriptor(setModel, false, true),
-      getLocal:setDescriptor(getLocal, false, true),
-      setLocal:setDescriptor(setLocal, false, true),
-      getSession:setDescriptor(getSession, false, true),
-      setSession:setDescriptor(setSession, false, true),
-      addLoopListener:setDescriptor(addLoopListener, false, true),
-      removeLoopListener:setDescriptor(removeLoopListener, false, true)
-    });
+  Object.defineProperties(Czosnek,{
+    register:setDescriptor(register, false, true),
+    isRegistered:setDescriptor(isRegistered, false, true),
+    getUnknown:setDescriptor(getUnknown, false, true),
+    isUnknown:setDescriptor(isUnknown, false, true)
+  });
+  /* ENDREGION */
+  
+  /* AMD AND COMMONJS COMPATABILITY */
+  /* REGION */
+  
+  if (typeof define === "function" && define.amd){
+    define('czosnek',function(){return Czosnek;});
+  }
+  if(typeof module === 'object' && typeof module.exports === 'object'){
+    module.exports.czosnek = Czosnek;
+  }
+  
   /* ENDREGION */
   
   return Czosnek;

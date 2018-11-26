@@ -37,7 +37,7 @@
   },
   "dependencies": {
     "frytki": "^1.0.1",
-    "pikantny": "^1.2.2"
+    "pikantny": "^1.2.3"
   },
   "eslintConfig": {
     "env": {
