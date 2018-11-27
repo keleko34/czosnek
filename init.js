@@ -47,9 +47,10 @@ window.czosnek = (function(){
     this.pointers = [];
   }
   
-  function mapObject(text, mapText, property, listener, local, localAttr, node, maps, localComponent, isAttr, isFor, id)
+  function mapObject(text, mapText, type, property, listener, local, localAttr, node, maps, localComponent, isAttr, isFor, id)
   {
     this.key = (isFor ? getForKey(text) : getKey(text));
+    this.type = type;
     this.text = text;
     this.mapText = mapText;
     this.keyLength = this.key.split('.').length;
@@ -324,11 +325,12 @@ window.czosnek = (function(){
           /* INSERT TYPE */
           if(item.match(__matchInsert))
           {
-            maps.inserts.push(new mapObject(item, mapText, 'innerHTML', undefined, child, 'textContent', localNode, maps, localComponent));
+            maps.inserts.push(new mapObject(item, mapText, 'insert', 'innerHTML', undefined, child, 'textContent', localNode, maps, localComponent));
+            mapText[x] = maps.inserts[(maps.inserts.length - 1)];
           }
           else if(item.match(__matchForText))
           {
-            mp = new mapObject(item, mapText, 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true);
+            mp = new mapObject(item, mapText, (localComponent ? 'pointers.loop' : 'loop'), 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true);
             
             /* POINTER FOR TYPE */
             if(localComponent)
@@ -340,6 +342,7 @@ window.czosnek = (function(){
             if(mapText.length === 1) 
             {
               toMap.loops.push(mp);
+              mapText[x] = mp;
             }
             else
             {
@@ -348,7 +351,7 @@ window.czosnek = (function(){
           }
           else if(item.match(__matchText))
           {
-            mp = new mapObject(item, mapText, 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent);
+            mp = new mapObject(item, mapText, (localComponent ? 'pointers.standard' : 'standard'), 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent);
             
             /* POINTER STANDARD TYPE */
             if(localComponent)
@@ -358,6 +361,7 @@ window.czosnek = (function(){
             }
             
             toMap.standards.push(mp);
+            mapText[x] = mp;
           }
         }
         break;
@@ -374,7 +378,7 @@ window.czosnek = (function(){
               nodeChildren = [],
               next;
               
-          mp = new mapObject(item, mapText, 'innerHTML', 'html', child, 'node', localNode, maps, localComponent);
+          mp = new mapObject(item, mapText, (localComponent ? 'pointers.node' : 'node'), 'innerHTML', 'html', child, 'node', localNode, maps, localComponent);
           
           if(localComponent)
           {
@@ -382,7 +386,7 @@ window.czosnek = (function(){
             localComponent.__czosnekExtensions__.pointers.push(mp);
           }
           toMap.nodes.push(mp);
-          
+          mapText[0] = mp;
           sibling = child.nextSibling;
           
           while(!sibling.textContent.match(reg))
@@ -424,11 +428,12 @@ window.czosnek = (function(){
             /* INSERT TYPE */
             if(item.match(__matchInsert))
             {
-              maps.inserts.push(new mapObject(item, mapText, title, undefined, attrs[i], 'value', localNode, maps, localComponent, true));
+              maps.inserts.push(new mapObject(item, mapText, 'insert', title, undefined, attrs[i], 'value', localNode, maps, localComponent, true));
+              mapText[x] = maps.inserts[(maps.inserts.length - 1)];
             }
             else if(item.match(__matchText))
             {
-              mp = new mapObject(item, mapText, title, title, attrs[i], 'value', localNode, maps, localComponent, true)
+              mp = new mapObject(item, mapText, (localComponent ? 'pointer.standard' : 'standard'), title, title, attrs[i], 'value', localNode, maps, localComponent, true)
               /* POINTER TYPE */
               if(localComponent)
               {
@@ -437,6 +442,7 @@ window.czosnek = (function(){
               }
               
               toMap.standards.push(mp);
+              mapText[x] = mp;
             }
           }
         }
