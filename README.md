@@ -183,5 +183,5 @@ You can view the license here: [License](https://github.com/keleko34/czosnek/blo
 
 [npm-url]: https://www.npmjs.com/package/czosnek
 [npm-image]: https://img.shields.io/npm/v/czosnek.svg
-[gitter-url]: https://gitter.im/czosnek/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
-[gitter-image]: https://badges.gitter.im/czosnek/Lobby.svg
+[gitter-url]: https://gitter.im/czosnekjs/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+[gitter-image]: https://badges.gitter.im/czosnekjs/Lobby.svg
