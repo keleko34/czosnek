@@ -35,10 +35,7 @@
     "sinon": "^4.1.2",
     "sinon-chai": "^2.14.0"
   },
-  "dependencies": {
-    "frytki": "^1.0.1",
-    "pikantny": "^1.2.3"
-  },
+  "dependencies": {},
   "eslintConfig": {
     "env": {
       "node": true,
