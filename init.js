@@ -44,7 +44,7 @@ window.czosnek = (function(){
   function attachExtensions(root)
   {
     this.root = root;
-    this.pointers = {};
+    this.pointers = [];
   }
   
   function mapObject(text, mapText, property, listener, local, localAttr, node, maps, localComponent, isAttr, isFor, id)
@@ -192,7 +192,7 @@ window.czosnek = (function(){
     return ((node instanceof HTMLUnknownElement) || (node.nodeName.indexOf('-') !== -1))
   }
   
-  function getUnknown(html)
+  function getUnknownHTML(html)
   {
     var matched = html.match(__reNodes),
         unknown = [],
@@ -213,6 +213,12 @@ window.czosnek = (function(){
     }
     
     return unknown;
+  }
+  
+  function getUnknown(node)
+  {
+    if(typeof node === 'string') return getUnknownHTML(node);
+    return __slice.call(node.querySelectorAll('*')).filter(isUnknown) 
   }
   
   function register(title, template)
@@ -300,6 +306,7 @@ window.czosnek = (function(){
         sibling,
         text,
         item,
+        mp,
         x = 0,
         len;
     
@@ -321,12 +328,18 @@ window.czosnek = (function(){
           }
           else if(item.match(__matchForText))
           {
+            mp = new mapObject(item, mapText, 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true);
+            
             /* POINTER FOR TYPE */
-            if(localComponent) toMap = maps.pointers;
+            if(localComponent)
+            {
+              toMap = maps.pointers;
+              localComponent.__czosnekExtensions__.pointers.push(mp);
+            }
             
             if(mapText.length === 1) 
             {
-              toMap.loops.push(new mapObject(item, mapText, 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true));
+              toMap.loops.push(mp);
             }
             else
             {
@@ -335,10 +348,16 @@ window.czosnek = (function(){
           }
           else if(item.match(__matchText))
           {
-            /* POINTER STANDARD TYPE */
-            if(localComponent) toMap = maps.pointers;
+            mp = new mapObject(item, mapText, 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent);
             
-            toMap.standards.push(new mapObject(item, mapText, 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent))
+            /* POINTER STANDARD TYPE */
+            if(localComponent)
+            {
+              toMap = maps.pointers;
+              localComponent.__czosnekExtensions__.pointers.push(mp);
+            }
+            
+            toMap.standards.push(mp);
           }
         }
         break;
@@ -354,9 +373,15 @@ window.czosnek = (function(){
               reg = new RegExp('(\<\/\{\{\s?'+key+'(.*?)\>)','g'),
               nodeChildren = [],
               next;
+              
+          mp = new mapObject(item, mapText, 'innerHTML', 'html', child, 'node', localNode, maps, localComponent);
           
-          if(localComponent) toMap = maps.pointers;
-          toMap.nodes.push(new mapObject(item, mapText, 'innerHTML', 'html', child, 'node', localNode, maps, localComponent));
+          if(localComponent)
+          {
+            toMap = maps.pointers;
+            localComponent.__czosnekExtensions__.pointers.push(mp);
+          }
+          toMap.nodes.push(mp);
           
           sibling = child.nextSibling;
           
@@ -403,10 +428,15 @@ window.czosnek = (function(){
             }
             else if(item.match(__matchText))
             {
+              mp = new mapObject(item, mapText, title, title, attrs[i], 'value', localNode, maps, localComponent, true)
               /* POINTER TYPE */
-              if(localComponent) toMap = maps.pointers;
+              if(localComponent)
+              {
+                toMap = maps.pointers;
+                localComponent.__czosnekExtensions__.pointers.push(mp);
+              }
               
-              toMap.standards.push(new mapObject(item, mapText, title, title, attrs[i], 'value', localNode, maps, localComponent, true));
+              toMap.standards.push(mp);
             }
           }
         }
