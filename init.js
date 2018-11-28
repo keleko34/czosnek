@@ -1,3 +1,5 @@
+/* TODO: maybe get rid of the obects of different maps and replace it with an array of arrays as we have type in the map object now */
+
 window.czosnek = (function(){
   /* SCOPED LOCALS */
   /* REGION */
