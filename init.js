@@ -245,6 +245,28 @@ window.czosnek = (function(){
     return this;
   }
   
+  function unregister(title)
+  {
+    __templates[title] = undefined;
+    return this;
+  }
+  
+  function clearRegistry()
+  {
+    var keys = Object.keys(__templates),
+        x = 0,
+        len = keys.length,
+        key;
+    
+    for(x;x<len;x++)
+    {
+      key = keys[x];
+      __templates[key] = undefined;
+    }
+    
+    return this;
+  }
+  
   function isRegistered(title)
   {
     return (__templates[title] !== undefined);
@@ -457,6 +479,8 @@ window.czosnek = (function(){
   
   Object.defineProperties(Czosnek,{
     register:setDescriptor(register, false, true),
+    unregister:setDescriptor(unregister, false, true),
+    clearRegistry:setDescriptor(clearRegistry, false, true),
     isRegistered:setDescriptor(isRegistered, false, true),
     getUnknown:setDescriptor(getUnknown, false, true),
     isUnknown:setDescriptor(isUnknown, false, true)

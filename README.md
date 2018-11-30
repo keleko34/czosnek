@@ -61,6 +61,11 @@ Templates allow us to register component names to larger sets of html
 
 Thus when we use the czosnek constructor an expanded version of this html will be created when a node with the tagname of a registered template is used.
 
+You can also choose to unregister a template later if you need to
+
+```
+czsonek.unregister("component_name");
+
 Fetching Components
 ============
 You can use some useful methods to help in the fetching of components in your html or dom
