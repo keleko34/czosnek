@@ -60,6 +60,7 @@ window.czosnek = (function(){
     this.filters = parseFilterTypes(getfilters(text));
     this.forComponent = (isFor ? getForComponent(text) : undefined);
     this.forId = id;
+    this.isPointer = (!!localComponent);
     this.isDirty = (mapText.length !== 1);
     this.listener = listener;
     this.property = property;
@@ -257,17 +258,6 @@ window.czosnek = (function(){
     {
       Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(node), '__czosnekExtensions__', false, false));
       extensions = node.__czosnekExtensions__;
-      maps =  {
-        standards: [],
-        inserts: [],
-        loops: [],
-        nodes: [],
-        pointers: {
-          standards: [],
-          loops: [],
-          nodes: []
-        }
-      }
     }
     
     var childNodes = node.childNodes,
@@ -305,11 +295,11 @@ window.czosnek = (function(){
   function getMap(child, localNode, maps, localComponent)
   {
     var mapText = [],
-        toMap = maps,
+        mapIndex,
+        foundMap = false,
         sibling,
         text,
         item,
-        mp,
         x = 0,
         len;
     
@@ -327,43 +317,44 @@ window.czosnek = (function(){
           /* INSERT TYPE */
           if(item.match(__matchInsert))
           {
-            maps.inserts.push(new mapObject(item, mapText, 'insert', 'innerHTML', undefined, child, 'textContent', localNode, maps, localComponent));
-            mapText[x] = maps.inserts[(maps.inserts.length - 1)];
+            if(!foundMap)
+            {
+              maps.push([]);
+              mapIndex = maps[(maps.length - 1)];
+              foundMap = true;
+            }
+            mapIndex.push(new mapObject(item, mapText, 'insert', 'innerHTML', undefined, child, 'textContent', localNode, maps, localComponent));
+            mapText[x] = mapIndex[(mapIndex.length - 1)];
           }
           else if(item.match(__matchForText))
           {
-            mp = new mapObject(item, mapText, (localComponent ? 'pointers.loop' : 'loop'), 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true);
+            if(!foundMap)
+            {
+              maps.push([]);
+              mapIndex = maps[(maps.length - 1)];
+              foundMap = true;
+            }
+            if(mapText.length !== 1) return console.error('ERR: loop binds can not include adjacent content,', text, 'in', localNode);
+            
+            mapIndex.push(new mapObject(item, mapText, (localComponent ? 'pointers.loop' : 'loop'), 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true));
+            mapText[x] = mapIndex[(mapIndex.length - 1)];
             
             /* POINTER FOR TYPE */
-            if(localComponent)
-            {
-              toMap = maps.pointers;
-              localComponent.__czosnekExtensions__.pointers.push(mp);
-            }
-            
-            if(mapText.length === 1) 
-            {
-              toMap.loops.push(mp);
-              mapText[x] = mp;
-            }
-            else
-            {
-              console.error('ERR: loop binds can not include adjacent content,', text, 'in', localNode);
-            }
+            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapIndex[(mapIndex.length - 1)]);
           }
           else if(item.match(__matchText))
           {
-            mp = new mapObject(item, mapText, (localComponent ? 'pointers.standard' : 'standard'), 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent);
+            if(!foundMap)
+            {
+              maps.push([]);
+              mapIndex = maps[(maps.length - 1)];
+              foundMap = true;
+            }
+            mapIndex.push(new mapObject(item, mapText, 'standard', 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent));
+            mapText[x] = mapIndex[(mapIndex.length - 1)];
             
             /* POINTER STANDARD TYPE */
-            if(localComponent)
-            {
-              toMap = maps.pointers;
-              localComponent.__czosnekExtensions__.pointers.push(mp);
-            }
-            
-            toMap.standards.push(mp);
-            mapText[x] = mp;
+            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapIndex[(mapIndex.length - 1)]);
           }
         }
         break;
@@ -375,20 +366,22 @@ window.czosnek = (function(){
         item = mapText[0];
         if(item.match(__matchText))
         {
+          if(!foundMap)
+          {
+            maps.push([]);
+            mapIndex = maps[(maps.length - 1)];
+            foundMap = true;
+          }
+          
           var key = getKey(item),
               reg = new RegExp('(\<\/\{\{\s?'+key+'(.*?)\>)','g'),
               nodeChildren = [],
               next;
-              
-          mp = new mapObject(item, mapText, (localComponent ? 'pointers.node' : 'node'), 'innerHTML', 'html', child, 'node', localNode, maps, localComponent);
           
-          if(localComponent)
-          {
-            toMap = maps.pointers;
-            localComponent.__czosnekExtensions__.pointers.push(mp);
-          }
-          toMap.nodes.push(mp);
-          mapText[0] = mp;
+          mapIndex.push(new mapObject(item, mapText, 'node', 'innerHTML', 'html', child, 'node', localNode, maps, localComponent));
+          
+          if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapIndex[(mapIndex.length - 1)]);
+          mapText[x] = mapIndex[(mapIndex.length - 1)];
           sibling = child.nextSibling;
           
           while(!sibling.textContent.match(reg))
@@ -404,7 +397,9 @@ window.czosnek = (function(){
           }
           localNode.removeChild(child);
           localNode.removeChild(sibling);
-          toMap.nodes[(toMap.nodes.length - 1)].nodeChildren = nodeChildren;
+          
+          /* double check that it is shared among object locations */
+          mapIndex[(mapIndex.length - 1)].nodeChildren = nodeChildren;
         }
         break;
         
@@ -430,21 +425,30 @@ window.czosnek = (function(){
             /* INSERT TYPE */
             if(item.match(__matchInsert))
             {
-              maps.inserts.push(new mapObject(item, mapText, 'insert', title, undefined, attrs[i], 'value', localNode, maps, localComponent, true));
-              mapText[x] = maps.inserts[(maps.inserts.length - 1)];
+              if(!foundMap)
+              {
+                maps.push([]);
+                mapIndex = maps[(maps.length - 1)];
+                foundMap = true;
+              }
+              
+              mapIndex.push(new mapObject(item, mapText, 'insert', title, undefined, attrs[i], 'value', localNode, maps, localComponent, true));
+              mapText[x] = mapIndex[(mapIndex.length - 1)];
             }
             else if(item.match(__matchText))
             {
-              mp = new mapObject(item, mapText, (localComponent ? 'pointer.standard' : 'standard'), title, title, attrs[i], 'value', localNode, maps, localComponent, true)
-              /* POINTER TYPE */
-              if(localComponent)
+              if(!foundMap)
               {
-                toMap = maps.pointers;
-                localComponent.__czosnekExtensions__.pointers.push(mp);
+                maps.push([]);
+                mapIndex = maps[(maps.length - 1)];
+                foundMap = true;
               }
               
-              toMap.standards.push(mp);
-              mapText[x] = mp;
+              mapIndex.push(new mapObject(item, mapText, 'standard', title, title, attrs[i], 'value', localNode, maps, localComponent, true));
+              mapText[x] = mapIndex[(mapIndex.length - 1)];
+              
+              /* POINTER TYPE */
+              if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapIndex[(mapIndex.length - 1)]);
             }
           }
         }
@@ -487,7 +491,7 @@ window.czosnek = (function(){
     
     this.expanded = wrapper.children[0];
     
-    this.maps = map(this.expanded);
+    this.maps = map(this.expanded, []);
   }
   
   Object.defineProperties(Czosnek,{

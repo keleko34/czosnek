@@ -26,14 +26,7 @@ function standardBinds(describe, it, expect)
     checkMapObject
   ];
   
-  function getType(obj, type)
-  {
-    return type.split('.').reduce(function(o, k){
-      return o[k];
-    }, obj);
-  }
-  
-  function runCategory(component, template, type, length, filters, objects)
+  function runCategory(component, template, length, filters, objects)
   {
     describe(component, function(){
       for(var x =0,len=methods.length;x<len;x++)
@@ -44,16 +37,16 @@ function standardBinds(describe, it, expect)
             testComponent = document.createElement(component);
         testDiv.stop().innerHTML = "";
         testDiv.stop().appendChild(testComponent);
-        methods[x](testComponent, type, length, filters, objects);
+        methods[x](testComponent, length, filters, objects);
       }
     });
   }
   
-  function checkMaps(component, type, len)
+  function checkMaps(component, len)
   {
     it("Should create the proper amount of maps", function(done){
       var test = new czosnek(component),
-          maps = getType(test.maps, type);
+          maps = test.maps;
       
       expect(maps.length).to.equal(len);
       
@@ -61,34 +54,34 @@ function standardBinds(describe, it, expect)
     });
   }
   
-  function checkFilters(component, type, len, filters)
+  function checkFilters(component, len, filters)
   {
     it("Should contain the proper filters for the maps", function(done){
       var test = new czosnek(component),
-          maps = getType(test.maps, type);
+          maps = test.maps;
       
       for(var x=0,len=maps.length;x<len;x++)
       {
-        var f = Object.keys(maps[x].filters).filter(function(v){return maps[x].filters[v].length;});
+        var f = Object.keys(maps[x][0].filters).filter(function(v){return maps[x][0].filters[v].length;});
         expect(JSON.stringify(f)).to.equal(JSON.stringify(Object.keys(filters[x])));
         for(var i=0,lenn=f.length;i<lenn;i++)
         {
-          expect(maps[x].filters[f[i]].length).to.equal(filters[x][f[i]].length);
+          expect(maps[x][0].filters[f[i]].length).to.equal(filters[x][f[i]].length);
         }
       }
       done();
     });
   }
   
-  function checkMapObject(component, type, len, filters, objects)
+  function checkMapObject(component, len, filters, objects)
   {
     it("Should contain the proper items in the map objects", function(done){
       var test = new czosnek(component),
-          maps = getType(test.maps, type);
+          maps = test.maps;
       
       for(var x=0,len=objects.length;x<len;x++)
       {
-        var filter = maps[x],
+        var filter = maps[x][0],
             keys = Object.keys(objects[x]);
         
         if(objects[x].localComponent) objects[x].localComponent = test.expanded.querySelector('test');
@@ -103,7 +96,7 @@ function standardBinds(describe, it, expect)
   }
   
   describe("Mapping:",function(){
-    runCategory('standard', templateStandard, 'standards', 2,
+    runCategory('standard', templateStandard, 2,
     [
       {
         model: [1],
@@ -138,7 +131,7 @@ function standardBinds(describe, it, expect)
         isRadio: false
       }
     ]);
-    runCategory('insert', templateInsert, 'inserts', 2,
+    runCategory('insert', templateInsert, 2,
     [
       {
         model: [1],
@@ -171,7 +164,7 @@ function standardBinds(describe, it, expect)
         isRadio: false
       }
     ]);
-    runCategory('for', templateFor, 'loops', 1,
+    runCategory('for', templateFor, 1,
     [
       { filters: [1] }
     ],
@@ -189,7 +182,7 @@ function standardBinds(describe, it, expect)
         isRadio: false
       }
     ]);
-    runCategory('pointer', templatePointer, 'pointers.standards', 2,
+    runCategory('pointer', templatePointer, 2,
     [
       { local: [1] },
       { filters: [1] }
@@ -220,7 +213,7 @@ function standardBinds(describe, it, expect)
         localComponent: true
       }
     ]);
-    runCategory('node', templateNode, 'nodes', 1,
+    runCategory('node', templateNode, 1,
     [
       { filters: [1] }
     ],
