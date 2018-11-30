@@ -280,6 +280,7 @@ window.czosnek = (function(){
     {
       Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(node), '__czosnekExtensions__', false, false));
       extensions = node.__czosnekExtensions__;
+      getMap(node, node, maps, (isUnknown(node) ? node : localComponent));
     }
     
     var childNodes = node.childNodes,
