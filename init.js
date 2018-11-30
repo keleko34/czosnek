@@ -295,8 +295,6 @@ window.czosnek = (function(){
   function getMap(child, localNode, maps, localComponent)
   {
     var mapText = [],
-        mapIndex,
-        foundMap = false,
         sibling,
         text,
         item,
@@ -317,44 +315,26 @@ window.czosnek = (function(){
           /* INSERT TYPE */
           if(item.match(__matchInsert))
           {
-            if(!foundMap)
-            {
-              maps.push([]);
-              mapIndex = maps[(maps.length - 1)];
-              foundMap = true;
-            }
-            mapIndex.push(new mapObject(item, mapText, 'insert', 'innerHTML', undefined, child, 'textContent', localNode, maps, localComponent));
-            mapText[x] = mapIndex[(mapIndex.length - 1)];
+            maps.push(new mapObject(item, mapText, 'insert', 'innerHTML', undefined, child, 'textContent', localNode, maps, localComponent));
+            mapText[x] = maps[(maps.length - 1)];
           }
           else if(item.match(__matchForText))
           {
-            if(!foundMap)
-            {
-              maps.push([]);
-              mapIndex = maps[(maps.length - 1)];
-              foundMap = true;
-            }
             if(mapText.length !== 1) return console.error('ERR: loop binds can not include adjacent content,', text, 'in', localNode);
             
-            mapIndex.push(new mapObject(item, mapText, (localComponent ? 'pointers.loop' : 'loop'), 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true));
-            mapText[x] = mapIndex[(mapIndex.length - 1)];
+            maps.push(new mapObject(item, mapText, (localComponent ? 'pointers.loop' : 'loop'), 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true));
+            mapText[x] = maps[(maps.length - 1)];
             
             /* POINTER FOR TYPE */
-            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapIndex[(mapIndex.length - 1)]);
+            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapText[x]);
           }
           else if(item.match(__matchText))
           {
-            if(!foundMap)
-            {
-              maps.push([]);
-              mapIndex = maps[(maps.length - 1)];
-              foundMap = true;
-            }
-            mapIndex.push(new mapObject(item, mapText, 'standard', 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent));
-            mapText[x] = mapIndex[(mapIndex.length - 1)];
+            maps.push(new mapObject(item, mapText, 'standard', 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent));
+            mapText[x] = maps[(maps.length - 1)];
             
             /* POINTER STANDARD TYPE */
-            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapIndex[(mapIndex.length - 1)]);
+            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapText[x]);
           }
         }
         break;
@@ -366,22 +346,17 @@ window.czosnek = (function(){
         item = mapText[0];
         if(item.match(__matchText))
         {
-          if(!foundMap)
-          {
-            maps.push([]);
-            mapIndex = maps[(maps.length - 1)];
-            foundMap = true;
-          }
-          
           var key = getKey(item),
               reg = new RegExp('(\<\/\{\{\s?'+key+'(.*?)\>)','g'),
               nodeChildren = [],
               next;
           
-          mapIndex.push(new mapObject(item, mapText, 'node', 'innerHTML', 'html', child, 'node', localNode, maps, localComponent));
+          maps.push(new mapObject(item, mapText, 'node', 'innerHTML', 'html', child, 'node', localNode, maps, localComponent));
+          mapText[x] = maps[(maps.length - 1)];
           
-          if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapIndex[(mapIndex.length - 1)]);
-          mapText[x] = mapIndex[(mapIndex.length - 1)];
+          /* POINTER NODE TYPE */
+          if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapText[x]);
+          
           sibling = child.nextSibling;
           
           while(!sibling.textContent.match(reg))
@@ -399,7 +374,7 @@ window.czosnek = (function(){
           localNode.removeChild(sibling);
           
           /* double check that it is shared among object locations */
-          mapIndex[(mapIndex.length - 1)].nodeChildren = nodeChildren;
+          mapText[x].nodeChildren = nodeChildren;
         }
         break;
         
@@ -425,30 +400,16 @@ window.czosnek = (function(){
             /* INSERT TYPE */
             if(item.match(__matchInsert))
             {
-              if(!foundMap)
-              {
-                maps.push([]);
-                mapIndex = maps[(maps.length - 1)];
-                foundMap = true;
-              }
-              
-              mapIndex.push(new mapObject(item, mapText, 'insert', title, undefined, attrs[i], 'value', localNode, maps, localComponent, true));
-              mapText[x] = mapIndex[(mapIndex.length - 1)];
+              maps.push(new mapObject(item, mapText, 'insert', title, undefined, attrs[i], 'value', localNode, maps, localComponent, true));
+              mapText[x] = maps[(maps.length - 1)];
             }
             else if(item.match(__matchText))
             {
-              if(!foundMap)
-              {
-                maps.push([]);
-                mapIndex = maps[(maps.length - 1)];
-                foundMap = true;
-              }
-              
-              mapIndex.push(new mapObject(item, mapText, 'standard', title, title, attrs[i], 'value', localNode, maps, localComponent, true));
-              mapText[x] = mapIndex[(mapIndex.length - 1)];
+              maps.push(new mapObject(item, mapText, 'standard', title, title, attrs[i], 'value', localNode, maps, localComponent, true));
+              mapText[x] = maps[(maps.length - 1)];
               
               /* POINTER TYPE */
-              if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapIndex[(mapIndex.length - 1)]);
+              if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapText[x]);
             }
           }
         }

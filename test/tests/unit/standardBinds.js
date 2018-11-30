@@ -62,11 +62,11 @@ function standardBinds(describe, it, expect)
       
       for(var x=0,len=maps.length;x<len;x++)
       {
-        var f = Object.keys(maps[x][0].filters).filter(function(v){return maps[x][0].filters[v].length;});
+        var f = Object.keys(maps[x].filters).filter(function(v){return maps[x].filters[v].length;});
         expect(JSON.stringify(f)).to.equal(JSON.stringify(Object.keys(filters[x])));
         for(var i=0,lenn=f.length;i<lenn;i++)
         {
-          expect(maps[x][0].filters[f[i]].length).to.equal(filters[x][f[i]].length);
+          expect(maps[x].filters[f[i]].length).to.equal(filters[x][f[i]].length);
         }
       }
       done();
@@ -81,7 +81,7 @@ function standardBinds(describe, it, expect)
       
       for(var x=0,len=objects.length;x<len;x++)
       {
-        var filter = maps[x][0],
+        var filter = maps[x],
             keys = Object.keys(objects[x]);
         
         if(objects[x].localComponent) objects[x].localComponent = test.expanded.querySelector('test');
