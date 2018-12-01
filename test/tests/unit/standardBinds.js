@@ -16,7 +16,7 @@ function standardBinds(describe, it, expect)
   </div>`,
       templateNode = `<div>
     <{{test | helper}} class={{cool}}>
-        <div></div>
+        <div>{{help}}</div>
     </{{test | helper}}>
   </div>`
   
@@ -35,8 +35,8 @@ function standardBinds(describe, it, expect)
         if(!czosnek.isRegistered(component)) czosnek.register(component, template);
         var testDiv = document.querySelector('.test-div'),
             testComponent = document.createElement(component);
-        testDiv.stop().innerHTML = "";
-        testDiv.stop().appendChild(testComponent);
+        testDiv.innerHTML = "";
+        testDiv.appendChild(testComponent);
         methods[x](testComponent, length, filters, objects);
       }
     });
@@ -213,9 +213,10 @@ function standardBinds(describe, it, expect)
         localComponent: true
       }
     ]);
-    runCategory('node', templateNode, 1,
+    runCategory('node', templateNode, 2,
     [
-      { filters: [1] }
+      { filters: [1] },
+      { }
     ],
     [
       {

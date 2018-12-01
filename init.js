@@ -273,10 +273,10 @@ window.czosnek = (function(){
   }
   
   /* creates the bind objects mapped against the text */
-  function map(node, maps, extensions, localComponent)
+  function map(node, maps, extensions, localComponent, isExtendable)
   {
     /* FIRST INITIAL CALL */
-    if(!extensions) 
+    if(!extensions || isExtendable)
     {
       Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(node), '__czosnekExtensions__', false, false));
       extensions = node.__czosnekExtensions__;
@@ -317,12 +317,16 @@ window.czosnek = (function(){
   
   function getMap(child, localNode, maps, localComponent)
   {
-    var mapText = [],
+    var extensions = localNode.__czosnekExtensions__,
+        mapText = [],
         sibling,
+        localmap,
         text,
         item,
         x = 0,
         len;
+    
+    if(!extensions.localmaps) extensions.localmaps = {};
     
     switch(child.nodeType)
     {
@@ -345,19 +349,31 @@ window.czosnek = (function(){
           {
             if(mapText.length !== 1) return console.error('ERR: loop binds can not include adjacent content,', text, 'in', localNode);
             
-            maps.push(new mapObject(item, mapText, (localComponent ? 'pointers.loop' : 'loop'), 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true));
-            mapText[x] = maps[(maps.length - 1)];
+            localmap = new mapObject(item, mapText, (localComponent ? 'pointers.loop' : 'loop'), 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true);
+            
+            maps.push(localmap);
+            mapText[x] = localmap;
+            
+            /* LOCAL MAPS */
+            if(!extensions.localmaps[map.key]) extensions.localmaps[map.key] = [];
+            extensions.localmaps[map.key].push(localmap);
             
             /* POINTER FOR TYPE */
-            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapText[x]);
+            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
           }
           else if(item.match(__matchText))
           {
-            maps.push(new mapObject(item, mapText, 'standard', 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent));
-            mapText[x] = maps[(maps.length - 1)];
+            localmap = new mapObject(item, mapText, 'standard', 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent);
+            
+            maps.push(localmap);
+            mapText[x] = localmap;
+            
+            /* LOCAL MAPS */
+            if(!extensions.localmaps[map.key]) extensions.localmaps[map.key] = [];
+            extensions.localmaps[map.key].push(localmap);
             
             /* POINTER STANDARD TYPE */
-            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapText[x]);
+            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
           }
         }
         break;
@@ -374,11 +390,17 @@ window.czosnek = (function(){
               nodeChildren = [],
               next;
           
-          maps.push(new mapObject(item, mapText, 'node', 'innerHTML', 'html', child, 'node', localNode, maps, localComponent));
-          mapText[x] = maps[(maps.length - 1)];
+          localmap = new mapObject(item, mapText, 'node', 'innerHTML', 'html', child, 'node', localNode, maps, localComponent);
+          
+          maps.push(localmap);
+          mapText[x] = localmap;
+          
+          /* LOCAL MAPS */
+          if(!extensions.localmaps[map.key]) extensions.localmaps[map.key] = [];
+          extensions.localmaps[map.key].push(localmap);
           
           /* POINTER NODE TYPE */
-          if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapText[x]);
+          if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
           
           sibling = child.nextSibling;
           
@@ -390,7 +412,7 @@ window.czosnek = (function(){
             
             var div = document.createElement('div');
             div.appendChild(sibling);
-            map(div, maps, child.__czosnekExtensions__, item);
+            map(div, maps, child.__czosnekExtensions__, child, true);
             sibling = next;
           }
           localNode.removeChild(child);
@@ -428,11 +450,17 @@ window.czosnek = (function(){
             }
             else if(item.match(__matchText))
             {
-              maps.push(new mapObject(item, mapText, 'standard', title, title, attrs[i], 'value', localNode, maps, localComponent, true));
-              mapText[x] = maps[(maps.length - 1)];
+              localmap = new mapObject(item, mapText, 'standard', title, title, attrs[i], 'value', localNode, maps, localComponent, true);
+              
+              maps.push(localmap);
+              mapText[x] = localmap;
+              
+              /* LOCAL MAPS */
+              if(!extensions.localmaps[map.key]) extensions.localmaps[map.key] = [];
+              extensions.localmaps[map.key].push(localmap);
               
               /* POINTER TYPE */
-              if(localComponent) localComponent.__czosnekExtensions__.pointers.push(mapText[x]);
+              if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
             }
           }
         }
