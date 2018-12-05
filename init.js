@@ -1,4 +1,6 @@
-/* TODO: maybe get rid of the obects of different maps and replace it with an array of arrays as we have type in the map object now */
+/* TODO: 
+   mapped onfinish event,
+   track inner components */
 
 window.czosnek = (function(){
   /* SCOPED LOCALS */
@@ -43,10 +45,16 @@ window.czosnek = (function(){
   /* OBJECT CLASSES */
   /* REGION */
   
-  function attachExtensions(root)
+  function attachExtensions(root, parent)
   {
     this.root = root;
     this.pointers = [];
+    this.parent = parent;
+    
+    Object.defineProperties(this, {
+      localmaps: setDescriptorLocalMaps(parent),
+      subnodes: setDecriptorSubNodes(parent)
+    })
   }
   
   function mapObject(text, mapText, type, property, listener, local, localAttr, node, maps, localComponent, isAttr, isFor, id)
@@ -89,6 +97,47 @@ window.czosnek = (function(){
     }
   }
   
+  function setDescriptorLocalMaps(parent)
+  {
+    var __arr = [],
+        __parentExt = (parent && parent.__czosnekExtensions__);
+    
+    function get(){ return __arr; }
+    
+    function set(v)
+    {
+      __arr.push(v);
+      if(__parentExt) __parentExt.localmaps = v;
+    }
+    
+    return {
+      get:get,
+      set:set,
+      enumerable: true,
+      configurable: true
+    }
+  }
+  
+  function setDecriptorSubNodes(parent)
+  {
+    var __arr = [],
+        __parentExt = (parent && parent.__czosnekExtensions__);
+    
+    function get(){ return __arr; }
+    
+    function set(v)
+    {
+      __arr.push(v);
+      if(__parentExt) __parentExt.subnodes = v;
+    }
+    
+    return {
+      get: get,
+      set: set,
+      enumerable: true,
+      configurable: true
+    }
+  }
   /* ENDREGION */
   
   /* BIND SPLITTING METHODS */
@@ -272,38 +321,48 @@ window.czosnek = (function(){
     return (__templates[title] !== undefined);
   }
   
-  /* creates the bind objects mapped against the text */
-  function map(node, maps, extensions, localComponent, isExtendable)
+  function map(node, parent, maps, localComponent)
   {
-    /* FIRST INITIAL CALL */
-    if(!extensions || isExtendable)
+    if(!node.__czosnekExtensions__)
     {
-      Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(node), '__czosnekExtensions__', false, false));
-      extensions = node.__czosnekExtensions__;
-      getMap(node, node, maps, (isUnknown(node) ? node : localComponent));
-    }
-    
-    var childNodes = node.childNodes,
-        x = 0,
-        len = childNodes.length,
-        localNode,
-        child;
-    
-    /* LOOP CHILDREN NODES INCLUDING TEXT AND COMMENT NODES */
-    for(x;x<len;x++)
-    {
-      child = childNodes[x];
+      var nodeType = node.nodeType,
+          isElement = ([8,3].indexOf(nodeType) === -1);
       
-      /* LOCAL REAL NODE (NOT TEXT OR COMMENT NODES) */
-      localNode = ([3,8].indexOf(child.nodeType) !== -1 ? child.parentElement : child);
+      if(isUnknown(node)) localComponent = node;
       
-      /* ONLY MAP IF THIS IS A LOCAL COMPONENT */
-      if(!child.__czosnekExtensions__)
+      Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(localComponent, parent)));
+      
+      switch(nodeType)
       {
-        Object.defineProperty(child, '__czosnekExtensions__', setDescriptor(new attachExtensions(extensions.root), '__czosnekExtensions__', false, false));
-        getMap(child, localNode, maps, (isUnknown(child) ? child : localComponent));
-        len = childNodes.length;
-        if(child.childNodes && child.childNodes.length) map(child, maps, extensions, (isUnknown(child) ? child : localComponent));
+        /* Text Node */
+        case 3:
+          mapTextNode(node, parent, maps, localComponent);
+          break;
+        /* Comment Node */
+        case 8:
+          mapCommentNode(node, parent, maps, localComponent);
+          break;
+        /* Standard Element */
+        default:
+          mapElementNode(node, parent, maps, localComponent);
+          break;
+      }
+      
+      if(isElement)
+      {
+        var childNodes = node.childNodes,
+            child,
+            x = 0,
+            len = childNodes.length;
+        
+        for(x;x<len;x++)
+        {
+          child = childNodes[x];
+          map(child, node, maps, localComponent);
+          
+          /* In case we have a node bind that removes some sibling nodes */
+          len = childNodes.length;
+        }
       }
     }
     
@@ -315,156 +374,161 @@ window.czosnek = (function(){
   /* BIND HELPERS */
   /* REGION */
   
-  function getMap(child, localNode, maps, localComponent)
+  function mapTextNode(node, parent, maps, localComponent)
   {
-    var extensions = localNode.__czosnekExtensions__,
-        mapText = [],
-        sibling,
+    if(!node.textContent.match(__matchText)) return;
+
+    var text = node.textContent,
+        extensions = node.__czosnekExtensions__,
+        mapText = splitText(text),
         localmap,
-        text,
         item,
         x = 0,
-        len;
-    
-    if(!extensions.localmaps) extensions.localmaps = {};
-    
-    switch(child.nodeType)
-    {
-      /* TEXT NODE, POSSIBLE MAPS: FOR, STANDARD, INSERT, POINTER */
-      case 3:
-        text = child.textContent;
-        mapText = splitText(text);
         len = mapText.length;
-        for(x;x<len;x++)
-        {
-          item = mapText[x];
+    
+    for(x;x<len;x++)
+    {
+      item = mapText[x];
+      
+      /* MATCH INSERT TYPE */
+      if(item.match(__matchInsert))
+      {
+        maps.push(new mapObject(item, mapText, 'insert', 'innerHTML', undefined, node, 'textContent', parent, maps, localComponent));
+        mapText[x] = maps[(maps.length - 1)];
+      }
+      
+      /* MATCH FOR TYPE */
+      else if(item.match(__matchForText))
+      {
+        if(mapText.length !== 1) return console.error('ERR: loop binds can not include adjacent content,', text, 'in', parent);
+        
+        localmap = new mapObject(item, mapText, (localComponent ? 'pointers.loop' : 'loop'), 'innerHTML', 'html', node, 'textContent', parent, maps, localComponent, undefined, true);
+            
+        maps.push(localmap);
+        mapText[x] = localmap;
+
+        /* LOCAL MAPS */
+        extensions.localmaps = localmap;
+
+        /* POINTER FOR TYPE */
+        if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
+      }
+      
+      /* MATCH TEXT TYPE */
+      else if(item.match(__matchText))
+      {
+        localmap = new mapObject(item, mapText, 'standard', 'innerHTML', 'html', node, 'textContent', parent, maps, localComponent);
+            
+        maps.push(localmap);
+        mapText[x] = localmap;
+
+        /* LOCAL MAPS */
+        extensions.localmaps = localmap;
+
+        /* POINTER STANDARD TYPE */
+        if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
+      }
+    }
+  }
+  
+  function mapCommentNode(node, parent, maps, localComponent)
+  {
+    if(!node.textContent.match(__matchText)) return;
+    
+    var text = node.textContent,
+        extensions = node.__czosnekExtensions__,
+        localmap,
+        mapText = [text.replace(__replaceNodeBind, '$2')],
+        item = mapText[0];
+        
+    if(item.match(__matchText))
+    {
+      var key = getKey(item),
+          reg = new RegExp('(\<\/\{\{\s?'+key+'(.*?)\>)','g'),
+          nodeChildren = [],
+          sibling,
+          next;
+      
+      localmap = new mapObject(item, mapText, 'node', 'innerHTML', 'html', node, 'node', parent, maps, localComponent);
           
-          /* INSERT TYPE */
+      maps.push(localmap);
+      mapText[0] = localmap;
+
+      /* LOCAL MAPS */
+      extensions.localmaps = localmap;
+
+      /* POINTER NODE TYPE */
+      if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
+
+      sibling = node.nextSibling;
+      
+      while(!sibling.textContent.match(reg))
+      {
+        next = sibling.nextSibling;
+        nodeChildren.push(sibling);
+        parent.removeChild(sibling);
+
+        var div = document.createElement('div');
+        div.appendChild(sibling);
+        map(div, node, maps, localComponent);
+        sibling = next;
+      }
+      parent.removeChild(node);
+      parent.removeChild(sibling);
+
+      /* double check that it is shared among object locations */
+      mapText[0].nodeChildren = nodeChildren;
+    }
+  }
+  
+  function mapElementNode(node, parent, maps, localComponent)
+  {
+    var attrs = __slice.call(node.attributes),
+        extensions = node.__czosnekExtensions__,
+        localmap,
+        item,
+        x = 0,
+        len = attrs.length,
+        text,
+        title,
+        mapText,
+        i,
+        lenn;
+    
+    for(x;x<len;x++)
+    {
+      text = attrs[x].value;
+      
+      if(text.match(__matchText))
+      {
+        title = attrs[x].name;
+        mapText = splitText(text);
+        lenn = mapText.length;
+        i = 0;
+
+        for(i;i<lenn;i++)
+        {
+          item = mapText[i];
           if(item.match(__matchInsert))
           {
-            maps.push(new mapObject(item, mapText, 'insert', 'innerHTML', undefined, child, 'textContent', localNode, maps, localComponent));
-            mapText[x] = maps[(maps.length - 1)];
-          }
-          else if(item.match(__matchForText))
-          {
-            if(mapText.length !== 1) return console.error('ERR: loop binds can not include adjacent content,', text, 'in', localNode);
-            
-            localmap = new mapObject(item, mapText, (localComponent ? 'pointers.loop' : 'loop'), 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent, undefined, true);
-            
-            maps.push(localmap);
-            mapText[x] = localmap;
-            
-            /* LOCAL MAPS */
-            if(!extensions.localmaps[map.key]) extensions.localmaps[map.key] = [];
-            extensions.localmaps[map.key].push(localmap);
-            
-            /* POINTER FOR TYPE */
-            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
+            maps.push(new mapObject(item, mapText, 'insert', title, undefined, attrs[x], 'value', node, maps, localComponent, true));
+            mapText[i] = maps[(maps.length - 1)];
           }
           else if(item.match(__matchText))
           {
-            localmap = new mapObject(item, mapText, 'standard', 'innerHTML', 'html', child, 'textContent', localNode, maps, localComponent);
-            
+            localmap = new mapObject(item, mapText, 'standard', title, title, attrs[x], 'value', node, maps, localComponent, true);
+              
             maps.push(localmap);
-            mapText[x] = localmap;
-            
+            mapText[i] = localmap;
+
             /* LOCAL MAPS */
-            if(!extensions.localmaps[map.key]) extensions.localmaps[map.key] = [];
-            extensions.localmaps[map.key].push(localmap);
-            
-            /* POINTER STANDARD TYPE */
+            extensions.localmaps = localmap;
+
+            /* POINTER TYPE */
             if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
           }
         }
-        break;
-        
-      /* COMMENT NODE, POSSIBLE MAPS: NODE, ATTRIBUTE NAME(future) */
-      case 8:
-        text = child.textContent;
-        mapText = [text.replace(__replaceNodeBind, '$2')];
-        item = mapText[0];
-        if(item.match(__matchText))
-        {
-          var key = getKey(item),
-              reg = new RegExp('(\<\/\{\{\s?'+key+'(.*?)\>)','g'),
-              nodeChildren = [],
-              next;
-          
-          localmap = new mapObject(item, mapText, 'node', 'innerHTML', 'html', child, 'node', localNode, maps, localComponent);
-          
-          maps.push(localmap);
-          mapText[x] = localmap;
-          
-          /* LOCAL MAPS */
-          if(!extensions.localmaps[map.key]) extensions.localmaps[map.key] = [];
-          extensions.localmaps[map.key].push(localmap);
-          
-          /* POINTER NODE TYPE */
-          if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
-          
-          sibling = child.nextSibling;
-          
-          while(!sibling.textContent.match(reg))
-          {
-            next = sibling.nextSibling;
-            nodeChildren.push(sibling);
-            localNode.removeChild(sibling);
-            
-            var div = document.createElement('div');
-            div.appendChild(sibling);
-            map(div, maps, child.__czosnekExtensions__, child, true);
-            sibling = next;
-          }
-          localNode.removeChild(child);
-          localNode.removeChild(sibling);
-          
-          /* double check that it is shared among object locations */
-          mapText[x].nodeChildren = nodeChildren;
-        }
-        break;
-        
-      /* NORMAL DOM NODE, POSSIBLE MAPS: STANDARD, INSERT, POINTER */
-      default:
-        
-        /* LOOP ATTRIBUTES */
-        var attrs = __slice.call(child.attributes),
-            i = 0,
-            lenn = attrs.length,
-            title;
-        
-        for(i;i<lenn;i++)
-        {
-          text = attrs[i].value;
-          title = attrs[i].name;
-          mapText = splitText(text);
-          len = mapText.length;
-          for(x;x<len;x++)
-          {
-            item = mapText[x];
-            
-            /* INSERT TYPE */
-            if(item.match(__matchInsert))
-            {
-              maps.push(new mapObject(item, mapText, 'insert', title, undefined, attrs[i], 'value', localNode, maps, localComponent, true));
-              mapText[x] = maps[(maps.length - 1)];
-            }
-            else if(item.match(__matchText))
-            {
-              localmap = new mapObject(item, mapText, 'standard', title, title, attrs[i], 'value', localNode, maps, localComponent, true);
-              
-              maps.push(localmap);
-              mapText[x] = localmap;
-              
-              /* LOCAL MAPS */
-              if(!extensions.localmaps[map.key]) extensions.localmaps[map.key] = [];
-              extensions.localmaps[map.key].push(localmap);
-              
-              /* POINTER TYPE */
-              if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
-            }
-          }
-        }
-        break;
+      }
     }
   }
   
@@ -473,7 +537,7 @@ window.czosnek = (function(){
   /* CONSTRUCTOR */
   /* REGION */
   function Czosnek(node)
-  {    
+  {
     /* Name of the component */
     this.name = node.tagName.toLowerCase();
 
@@ -503,7 +567,7 @@ window.czosnek = (function(){
     
     this.expanded = wrapper.children[0];
     
-    this.maps = map(this.expanded, []);
+    this.maps = map(this.expanded, undefined, []);
   }
   
   Object.defineProperties(Czosnek,{
