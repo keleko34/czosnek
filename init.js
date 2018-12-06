@@ -1,6 +1,4 @@
-/* TODO: 
-   mapped onfinish event,
-   track inner components */
+/* TODO: */
 
 window.czosnek = (function(){
   /* SCOPED LOCALS */
@@ -45,12 +43,12 @@ window.czosnek = (function(){
   /* OBJECT CLASSES */
   /* REGION */
   
-  function attachExtensions(root, parent)
+  function attachExtensions(root, parent, maps)
   {
     this.root = root;
     this.pointers = [];
     this.parent = parent;
-    
+    this.maps = maps;
     Object.defineProperties(this, {
       localmaps: setDescriptorLocalMaps(parent),
       subnodes: setDecriptorSubNodes(parent)
@@ -330,7 +328,7 @@ window.czosnek = (function(){
       
       if(isUnknown(node)) localComponent = node;
       
-      Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(localComponent, parent)));
+      Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(localComponent, parent, maps)));
       
       switch(nodeType)
       {
