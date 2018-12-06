@@ -328,7 +328,7 @@ window.czosnek = (function(){
       
       if(isUnknown(node)) localComponent = node;
       
-      Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(localComponent, (parent || node), maps)));
+      Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions((localComponent || node), parent, maps)));
       
       switch(nodeType)
       {
