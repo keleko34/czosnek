@@ -555,7 +555,7 @@ window.czosnek = (function(){
     
     if(this.node.__czosnekExtensions__) this.pointers = this.node.__czosnekExtensions__.pointers;
     
-    this.innerHTML = this.node.innerHTML;
+    this.innerHTML = (this.node.childNodes || []);
 
     /* EXPAND NODE */
     var wrapper = document.createElement('div');
