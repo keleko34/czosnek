@@ -1,20 +1,4 @@
-/* TODO: 
-    Map extra style node located in head,
-    tell if a style map belongs to a {local} style group
-    {local} style groups are seperated into their own style node (speedier processing)
-    update style maps method with new style mappings
-    create a style mapping assign function to keep track of new styles added
-    
-    future:
-    add {local} random number id to all nodes
-    add {map} ({local-rnd}) random number id to each node
-    
-    maps have 4 states:
-    initial
-    add
-    remove
-    update
-*/
+/* TODO: */
 
 window.czosnek = (function(){
   
@@ -520,7 +504,6 @@ window.czosnek = (function(){
     return styleNode;
   }
   
-  /* TODO: REWORK MAP OBJECT AND REMOVE LOCALCOMPONENT FOR INNERHTML, ADD MAPCOMPONENT NODE FOR POINTERS */
   function mapTextNode(node, parent, maps, id)
   {
     if(!node.textContent.match(__matchText)) return;
@@ -720,7 +703,8 @@ window.czosnek = (function(){
 
             /* LOCAL MAPS */
             extensions.localmaps = localmap;
-            node.__czosnekExtensions__.pointers.push(localmap);
+            extensions.pointers.push(localmap);
+            extensions.innerHTML = node.childNodes;
           }
         }
       }
