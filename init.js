@@ -1,16 +1,38 @@
-/* TODO: */
+/* TODO: 
+    Map extra style node located in head,
+    tell if a style map belongs to a {local} style group
+    {local} style groups are seperated into their own style node (speedier processing)
+    update style maps method with new style mappings
+    create a style mapping assign function to keep track of new styles added
+    
+    future:
+    add {local} random number id to all nodes
+    add {map} ({local-rnd}) random number id to each node
+    
+    maps have 4 states:
+    initial
+    add
+    remove
+    update
+*/
 
 window.czosnek = (function(){
+  
   /* SCOPED LOCALS */
   /* REGION */
   
-      /* start bind chars */
+      /* HTML TEMPLATES FOR COMPONENTS */
   var __templates = {},
+      
+      /* CSS STYLE TEMPLATES FOR COMPONENTS */
+      __styles = {},
       
       /* events associated with the dom */
       __domEvents = Object.keys(HTMLElement.prototype).filter(function(v){return v.indexOf('on') === 0}),
       
-      __slice = Array.prototype.slice;
+      __slice = Array.prototype.slice,
+      
+      __byteToHex = Array.apply(null, Array(256)).map(function(v, i){return (i + 0x100).toString(16).substr(1);});
   /* ENDREGION */
   
   /* REGEX RULES */
@@ -36,7 +58,9 @@ window.czosnek = (function(){
       __replaceEndingTag = /(<(?!input|img)(.*?) (.*?)\/>)/g,
       __replaceTag = /[(\<\\)\>]/g,
       __replaceNodeName = /(\<\/?\{\{(.*?)\>)/g,
-      __replaceNodeBind = /(<({{.*?}})(.*))/g;
+      __replaceNodeBind = /(<({{.*?}})(.*))/g,
+      __matchLocal = /({{>?local}})/g,
+      __matchLocalStyle = /((.*?)({{>?local}}[\r\n\s\S]*?{(([\r\n\s\W\w]+?)|(.*?))(?:[^}])}(?=[\n\.\r\s]|$)))/g;
       
   /* ENDREGION */
   
@@ -51,11 +75,11 @@ window.czosnek = (function(){
     this.maps = maps;
     Object.defineProperties(this, {
       localmaps: setDescriptorLocalMaps(parent),
-      subnodes: setDecriptorSubNodes(parent)
+      subnodes: setDescriptorSubNodes(parent)
     })
   }
   
-  function mapObject(text, mapText, type, property, listener, local, localAttr, node, maps, localComponent, isAttr, isFor, id)
+  function mapObject(local_id, node_id, text, mapText, type, property, listener, local, localAttr, node, maps, isAttr, isFor, isPointer, isStyle, for_id)
   {
     this.key = (isFor ? getForKey(text) : getKey(text));
     this.type = type;
@@ -65,19 +89,29 @@ window.czosnek = (function(){
     this.localKey = this.key.split('.').pop();
     this.filters = parseFilterTypes(getfilters(text));
     this.forComponent = (isFor ? getForComponent(text) : undefined);
-    this.forId = id;
-    this.isPointer = (!!localComponent);
+    this.forId = for_id;
+    this.isPointer = isPointer;
     this.isDirty = (mapText.length !== 1);
     this.listener = listener;
     this.property = property;
-    this.local = local;
+    this.local = local
     this.localAttr = localAttr;
-    this.localComponent = localComponent;
     this.node = node;
     this.maps = maps;
+    this.isAttr = isAttr;
+    this.isFor = isFor;
+    this.isStyle = isStyle;
     this.isEvent = (!!isAttr && __domEvents.indexOf(localAttr) !== -1);
     this.isInput = (node.tagName === 'INPUT');
     this.isRadio = (!!this.isInput && ['radio','checkbox'].indexOf(node.type) !== -1);
+    
+    if(!isStyle)
+    {
+      Object.defineProperties(this, {
+        localId: setDescriptorAttribute('component-id', local_id, node),
+        nodeId: setDescriptorAttribute('node-id', (local_id + '-' + node_id), node)
+      });
+    }
   }
   
   /* ENDREGION */
@@ -116,7 +150,7 @@ window.czosnek = (function(){
     }
   }
   
-  function setDecriptorSubNodes(parent)
+  function setDescriptorSubNodes(parent)
   {
     var __arr = [],
         __parentExt = (parent && parent.__czosnekExtensions__);
@@ -129,6 +163,26 @@ window.czosnek = (function(){
       if(__parentExt) __parentExt.subnodes = v;
     }
     
+    return {
+      get: get,
+      set: set,
+      enumerable: true,
+      configurable: true
+    }
+  }
+  
+  function setDescriptorAttribute(title, value, node)
+  {
+    var attr = node.attributes;
+    if(!attr[title]) node.setAttribute(title, value);
+    function get()
+    {
+      return attr[title].value;
+    }
+    function set(v)
+    {
+      attr[title].value = v;
+    }
     return {
       get: get,
       set: set,
@@ -272,7 +326,7 @@ window.czosnek = (function(){
     return __slice.call(node.querySelectorAll('*')).filter(isUnknown) 
   }
   
-  function register(title, template)
+  function register(title, template, style)
   {
     if(__templates[title] === undefined)
     {
@@ -284,6 +338,13 @@ window.czosnek = (function(){
       
       /* replaces <{{bind}}> tags as comments */
       .replace(__replaceNodeName, '<!--$1-->');
+      
+      style = (style || '');
+      
+      var local = (style.match(__matchLocalStyle) || ''),
+          global = style.replace(__matchLocalStyle, '');
+      
+      __styles[title] = [global, (local && local.join('\r\n'))];
     }
     else
     {
@@ -295,6 +356,7 @@ window.czosnek = (function(){
   function unregister(title)
   {
     __templates[title] = undefined;
+    __styles[title] = undefined;
     return this;
   }
   
@@ -309,6 +371,7 @@ window.czosnek = (function(){
     {
       key = keys[x];
       __templates[key] = undefined;
+      __styles[key] = undefined;
     }
     
     return this;
@@ -319,52 +382,36 @@ window.czosnek = (function(){
     return (__templates[title] !== undefined);
   }
   
-  function map(node, parent, maps, localComponent)
+  function map(component, style, id)
   {
-    if(!node.__czosnekExtensions__)
-    {
-      var nodeType = node.nodeType,
-          isElement = ([8,3].indexOf(nodeType) === -1);
-      
-      if(isUnknown(node)) localComponent = node;
-      
-      Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions((localComponent || node), parent, maps)));
-      
-      switch(nodeType)
-      {
-        /* Text Node */
-        case 3:
-          mapTextNode(node, parent, maps, localComponent);
-          break;
-        /* Comment Node */
-        case 8:
-          mapCommentNode(node, parent, maps, localComponent);
-          break;
-        /* Standard Element */
-        default:
-          mapElementNode(node, parent, maps, localComponent);
-          break;
-      }
-      
-      if(isElement)
-      {
-        var childNodes = node.childNodes,
-            child,
-            x = 0,
-            len = childNodes.length;
-        
-        for(x;x<len;x++)
-        {
-          child = childNodes[x];
-          map(child, node, maps, localComponent);
-          
-          /* In case we have a node bind that removes some sibling nodes */
-          len = childNodes.length;
-        }
-      }
-    }
+    var maps = [];
     
-    return maps;
+    createGlobalStyleMaps(style[0], maps, id);
+    createLocalStyleMaps(style[1], maps, id);
+    
+    return createMaps(component, undefined, maps, id);
+  }
+  
+  /* creates style objects, one is localized to the component, one is global */
+  function style(title, id)
+  {
+    if(!__templates[title]) return console.error("ERR: Component "+title+" does not exist, make sure to create it", new Error().stack);
+    
+    var styleTemplates = __styles[title],
+        mainStyle = (document.head.querySelector('style[title="'+ title +'"]') || createStyleNode(title, styleTemplates[0])),
+        localStyle = createStyleNode(id, styleTemplates[1]);
+    
+    return [mainStyle, localStyle];
+  }
+  
+  function expand(title)
+  {
+    var wrapper = document.createElement('div');
+    wrapper.innerHTML = (__templates[title] || '<div class="missing_component">Unknown Component</div>');
+
+    if(wrapper.children.length !== 1) return console.error('ERR: Component must be wrapped in a single element,', wrapper.children.length, 'nodes in', title, new Error().stack);
+
+    return wrapper.children[0];
   }
   
   /* ENDREGION */
@@ -372,7 +419,109 @@ window.czosnek = (function(){
   /* BIND HELPERS */
   /* REGION */
   
-  function mapTextNode(node, parent, maps, localComponent)
+  function uuid()
+  {
+    var rnds = new Uint8Array(8).map(function(){return Math.floor((Math.random() * 99) + 1)}),
+        i = 0;
+    rnds[6] = (rnds[6] & 0x0f) | 0x40;
+    rnds[8] = (rnds[8] & 0x0f) | 0x80;
+    
+    return ([__byteToHex[rnds[i++]], __byteToHex[rnds[i++]], 
+             __byteToHex[rnds[i++]], __byteToHex[rnds[i++]],
+             __byteToHex[rnds[i++]], __byteToHex[rnds[i++]],
+             __byteToHex[rnds[i++]], __byteToHex[rnds[i++]]]).join('');
+  }
+  
+  function createMaps(node, parent, maps, id)
+  {
+    id = (id || uuid());
+    
+    Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
+    
+    switch(node.nodeType)
+    {
+      /* Text Node */
+      case 3:
+        mapTextNode(node, parent, maps, id);
+        break;
+      /* Comment Node */
+      case 8:
+        mapCommentNode(node, parent, maps, id);
+        break;
+      /* Standard Element */
+      default:
+        if(isUnknown(node))
+        {
+          mapComponentNode(node, parent, maps, id);
+        }
+        else
+        {
+          mapElementNode(node, parent, maps, id);
+        }
+        break;
+    }
+    
+    if(node.childNodes)
+    {
+        var x = 0,
+            len = node.childNodes.length;
+      
+      for(x;x<len;x++)
+      {
+        createMaps(node.childNodes[x], node, maps, id);
+        len = node.childNodes.length;
+      }
+    }
+    
+    return maps;
+  }
+  
+  function createGlobalStyleMaps(node, maps, id)
+  {
+    id = (id || uuid());
+    if(!node.__czosnekExtensions__) Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
+    
+    var localmaps = node.__czosnekExtensions__.localmaps;
+    
+    if(localmaps && localmaps.length)
+    {
+      var x = 0,
+          len = localmaps.length;
+      
+      for(x;x<len;x++)
+      {
+        maps.push(localmaps[x]);
+      }
+    }
+    else
+    {
+      mapStyleNode(node, maps, id);
+    }
+    return maps;
+  }
+  
+  function createLocalStyleMaps(node, maps, id)
+  {
+    id = (id || uuid());
+    if(!node.__czosnekExtensions__) Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
+    mapStyleNode(node, maps, id, uuid());
+    return maps;
+  }
+  
+  function createStyleNode(title, template)
+  {
+    var styleNode = document.createElement('style');
+    styleNode.type = 'text/css';
+    styleNode.title =  title;
+    styleNode.textContent = template;
+    
+    document.head.appendChild(styleNode);
+    
+    return styleNode;
+  }
+  
+  /* TODO: REWORK MAP OBJECT AND REMOVE LOCALCOMPONENT FOR INNERHTML, ADD MAPCOMPONENT NODE FOR POINTERS */
+  function mapTextNode(node, parent, maps, id)
   {
     if(!node.textContent.match(__matchText)) return;
 
@@ -382,7 +531,10 @@ window.czosnek = (function(){
         localmap,
         item,
         x = 0,
-        len = mapText.length;
+        len = mapText.length,
+        nodeId = uuid(),
+        u = undefined,
+        f = false;
     
     for(x;x<len;x++)
     {
@@ -391,7 +543,7 @@ window.czosnek = (function(){
       /* MATCH INSERT TYPE */
       if(item.match(__matchInsert))
       {
-        maps.push(new mapObject(item, mapText, 'insert', 'innerHTML', undefined, node, 'textContent', parent, maps, localComponent));
+        maps.push(new mapObject(id, nodeId, item, mapText, 'insert', 'innerHTML', u, node, 'textContent', parent, maps));
         mapText[x] = maps[(maps.length - 1)];
       }
       
@@ -400,36 +552,30 @@ window.czosnek = (function(){
       {
         if(mapText.length !== 1) return console.error('ERR: loop binds can not include adjacent content,', text, 'in', parent);
         
-        localmap = new mapObject(item, mapText, (localComponent ? 'pointers.loop' : 'loop'), 'innerHTML', 'html', node, 'textContent', parent, maps, localComponent, undefined, true);
+        localmap = new mapObject(id, nodeId, item, mapText, 'loop', 'innerHTML', 'html', node, 'textContent', parent, maps, f, true, f, f, f, uuid());
             
         maps.push(localmap);
         mapText[x] = localmap;
 
         /* LOCAL MAPS */
         extensions.localmaps = localmap;
-
-        /* POINTER FOR TYPE */
-        if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
       }
       
       /* MATCH TEXT TYPE */
       else if(item.match(__matchText))
       {
-        localmap = new mapObject(item, mapText, 'standard', 'innerHTML', 'html', node, 'textContent', parent, maps, localComponent);
+        localmap = new mapObject(id, nodeId, item, mapText, 'standard', 'innerHTML', 'html', node, 'textContent', parent, maps);
             
         maps.push(localmap);
         mapText[x] = localmap;
 
         /* LOCAL MAPS */
         extensions.localmaps = localmap;
-
-        /* POINTER STANDARD TYPE */
-        if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
       }
     }
   }
   
-  function mapCommentNode(node, parent, maps, localComponent)
+  function mapCommentNode(node, parent, maps, id)
   {
     if(!node.textContent.match(__matchText)) return;
     
@@ -437,18 +583,20 @@ window.czosnek = (function(){
         extensions = node.__czosnekExtensions__,
         localmap,
         mapText = [text.replace(__replaceNodeBind, '$2')],
-        item = mapText[0];
+        item = mapText[0],
+        nodeId = uuid();
         
     if(item.match(__matchText))
     {
+      /* TODO: Should we allow multiple inner hot swappable components? */
       var key = getKey(item),
           reg = new RegExp('(\<\/\{\{\s?'+key+'(.*?)\>)','g'),
           nodeChildren = [],
           sibling,
           next;
       
-      localmap = new mapObject(item, mapText, 'node', 'innerHTML', 'html', node, 'node', parent, maps, localComponent);
-          
+      localmap = new mapObject(id, nodeId, item, mapText, 'node', 'innerHTML', 'html', node, 'node', parent, maps);
+
       maps.push(localmap);
       mapText[0] = localmap;
 
@@ -456,7 +604,8 @@ window.czosnek = (function(){
       extensions.localmaps = localmap;
 
       /* POINTER NODE TYPE */
-      if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
+      /* TODO: map to unknown component comment attributes */
+      // node.__czosnekExtensions__.pointers.push(localmap);
 
       sibling = node.nextSibling;
       
@@ -468,7 +617,7 @@ window.czosnek = (function(){
 
         var div = document.createElement('div');
         div.appendChild(sibling);
-        map(div, node, maps, localComponent);
+        createMaps(div, node, maps, id);
         sibling = next;
       }
       parent.removeChild(node);
@@ -479,10 +628,11 @@ window.czosnek = (function(){
     }
   }
   
-  function mapElementNode(node, parent, maps, localComponent)
+  function mapElementNode(node, parent, maps, id)
   {
     var attrs = __slice.call(node.attributes),
         extensions = node.__czosnekExtensions__,
+        nodeId = uuid(),
         localmap,
         item,
         x = 0,
@@ -509,63 +659,142 @@ window.czosnek = (function(){
           item = mapText[i];
           if(item.match(__matchInsert))
           {
-            maps.push(new mapObject(item, mapText, 'insert', title, undefined, attrs[x], 'value', node, maps, localComponent, true));
+            maps.push(new mapObject(id, nodeId, item, mapText, 'insert', title, undefined, attrs[x], 'value', node, maps, true));
             mapText[i] = maps[(maps.length - 1)];
           }
           else if(item.match(__matchText))
           {
-            localmap = new mapObject(item, mapText, 'standard', title, title, attrs[x], 'value', node, maps, localComponent, true);
+            localmap = new mapObject(id, nodeId, item, mapText, 'standard', title, title, attrs[x], 'value', node, maps, true);
               
             maps.push(localmap);
             mapText[i] = localmap;
 
             /* LOCAL MAPS */
             extensions.localmaps = localmap;
-
-            /* POINTER TYPE */
-            if(localComponent) localComponent.__czosnekExtensions__.pointers.push(localmap);
           }
         }
       }
     }
   }
   
+  function mapComponentNode(node, parent, maps, id)
+  {
+    var attrs = __slice.call(node.attributes),
+        extensions = node.__czosnekExtensions__,
+        nodeId = uuid(),
+        localmap,
+        item,
+        x = 0,
+        len = attrs.length,
+        text,
+        title,
+        mapText,
+        i,
+        lenn;
+    
+    for(x;x<len;x++)
+    {
+      text = attrs[x].value;
+      
+      if(text.match(__matchText))
+      {
+        title = attrs[x].name;
+        mapText = splitText(text);
+        lenn = mapText.length;
+        i = 0;
+        
+        for(i;i<lenn;i++)
+        {
+          item = mapText[i];
+          if(item.match(__matchInsert))
+          {
+            maps.push(new mapObject(id, nodeId, item, mapText, 'insert', title, undefined, attrs[x], 'value', node, maps, true));
+            mapText[i] = maps[(maps.length - 1)];
+          }
+          else if(item.match(__matchText))
+          {
+            localmap = new mapObject(id, nodeId, item, mapText, 'insert', title, title, attrs[x], 'value', node, maps, true);
+
+            maps.push(localmap);
+            mapText[i] = localmap;
+
+            /* LOCAL MAPS */
+            extensions.localmaps = localmap;
+            node.__czosnekExtensions__.pointers.push(localmap);
+          }
+        }
+      }
+    }
+  }
+  
+  function mapStyleNode(node, maps, id, localid)
+  {
+    if(!node.textContent.match(__matchText)) return;
+    
+    var text = node.textContent,
+        extensions = node.__czosnekExtensions__,
+        mapText = splitText(text),
+        outputText = [],
+        localmap,
+        item,
+        x = 0,
+        len = mapText.length,
+        nodeId = localid,
+        u = undefined,
+        f = false;
+    
+    for(x;x<len;x++)
+    {
+      item = mapText[x];
+      outputText[x] = item;
+      /* MATCH LOCAL KEY */
+      if (item.match(__matchLocal))
+      {
+        outputText[x] = '[component-id="'+ id +'"]';
+      }
+      /* MATCH INSERT TYPE */
+      else if(item.match(__matchInsert))
+      {
+        maps.push(new mapObject(id, nodeId, item, mapText, 'insert', 'html', u, node, 'textContent', node, maps, f, f, f, true));
+        mapText[x] = maps[(maps.length - 1)];
+      }
+      /* MATCH TEXT TYPE */
+      else if(item.match(__matchText))
+      {
+        localmap = new mapObject(id, nodeId, item, mapText, 'standard', 'innerHTML', 'html', node, 'textContent', node, maps, f, f, f, true);
+            
+        maps.push(localmap);
+        mapText[x] = localmap;
+
+        /* LOCAL MAPS */
+        extensions.localmaps = localmap;
+      }
+    }
+    
+    node.textContent = outputText.join('');
+  }
+  
   /* ENDREGION */
   
   /* CONSTRUCTOR */
   /* REGION */
-  function Czosnek(node)
+  function Czosnek(title)
   {
+    if(!__templates[title]) return console.error("ERR: Component "+title+" does not exist, make sure to create it", new Error().stack);
     /* Name of the component */
-    this.name = node.tagName.toLowerCase();
-
-    if(!__templates[this.name]) console.error("ERR: Component "+this.name+" does not exist, make sure to create it", new Error().stack);
-
-    /* template of the component */
-    this.template = __templates[this.name] || '<div class="missing_component">Unknown Component</div>';
-
-    /* original node */
-    this.node = node;
-
-    /* SETUP PARAMS */
-    /* Fetch all possible params for this component: Attributes, pointers, html */
-    this.params = __slice.call(this.node.attributes).reduce(function(o, v) {
-      return ((o[v.name] = v.value) && o);
-    },{});
+    this.title = title;
     
-    if(this.node.__czosnekExtensions__) this.pointers = this.node.__czosnekExtensions__.pointers;
+    /* Component ID */
+    this.id = uuid();
     
-    this.innerHTML = (this.node.childNodes || []);
-
-    /* EXPAND NODE */
-    var wrapper = document.createElement('div');
-    wrapper.innerHTML = this.template;
+    /* created component */
+    this.component = expand(title);
     
-    if(wrapper.children.length !== 1) return console.error('ERR: Component must be wrapped in a single element,', wrapper.children.length, 'nodes in', this.name, new Error().stack);
+    /* Expanded styles */
+    this.style = style(title, this.id);
     
-    this.expanded = wrapper.children[0];
-    
-    this.maps = map(this.expanded, undefined, []);
+    /* Maps of component */
+    this.maps = map(this.component, this.style, this.id);
   }
   
   Object.defineProperties(Czosnek,{
@@ -574,7 +803,9 @@ window.czosnek = (function(){
     clearRegistry:setDescriptor(clearRegistry, false, true),
     isRegistered:setDescriptor(isRegistered, false, true),
     getUnknown:setDescriptor(getUnknown, false, true),
-    isUnknown:setDescriptor(isUnknown, false, true)
+    isUnknown:setDescriptor(isUnknown, false, true),
+    expand:setDescriptor(expand, false, true),
+    map:setDescriptor(map, false, true)
   });
   /* ENDREGION */
   

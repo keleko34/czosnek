@@ -43,7 +43,8 @@
     "globals": {
       "define": true,
       "module": true,
-      "czosnek": true
+      "czosnek": true,
+      "Uint8Array": true
     },
     "rules": {
       "no-console": "off"
