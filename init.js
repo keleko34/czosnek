@@ -278,7 +278,7 @@ window.czosnek = (function(){
   /* REGION */
   function isUnknown(node)
   {
-    return ((node instanceof HTMLUnknownElement) || (node.nodeName.indexOf('-') !== -1))
+    return ((node.nodeName.indexOf('-') !== -1) || node instanceof HTMLUnknownElement)
   }
   
   function getUnknownHTML(html)
@@ -292,7 +292,7 @@ window.czosnek = (function(){
     for(x;x<len;x++)
     {
       key = matched[x].replace(__replaceTag, '');
-      if((document.createElement(key) instanceof HTMLUnknownElement) || key.indexOf('-') !== -1)
+      if((key.indexOf('-') !== -1) || document.createElement(key) instanceof HTMLUnknownElement)
       {
         if(unknown.indexOf(key) === -1) 
         {
