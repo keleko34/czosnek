@@ -66,7 +66,8 @@ window.czosnek = (function(){
   function mapObject(local_id, node_id, text, mapText, type, property, listener, local, localAttr, node, maps, isAttr, isFor, isPointer, isStyle, for_id)
   {
     this.key = (isFor ? getForKey(text) : getKey(text));
-    this.type = type;
+    /* Always force innerhtml */
+    this.type = (this.key === 'innerHTML' ? 'insert' : type);
     this.text = text;
     this.mapText = mapText;
     this.keyLength = this.key.split('.').length;
@@ -75,7 +76,7 @@ window.czosnek = (function(){
     this.forComponent = (isFor ? getForComponent(text) : undefined);
     this.forId = for_id;
     this.isPointer = isPointer;
-    this.isDirty = (mapText.length !== 1);
+    this.isDirty = (mapText.length !== 1 || this.key === 'innerHTML');
     this.listener = listener;
     this.property = property;
     this.local = local
