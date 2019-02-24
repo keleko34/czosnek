@@ -505,7 +505,7 @@ window.czosnek = (function(){
   {
     var styleNode = document.createElement('style');
     styleNode.type = 'text/css';
-    styleNode.title =  title;
+    styleNode.setAttribute('component', title);
     styleNode.textContent = template;
     if(id) styleNode.setAttribute('component-id', id);
     document.head.appendChild(styleNode);
