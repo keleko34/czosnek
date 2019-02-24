@@ -2,7 +2,7 @@
   "name": "czosnek",
   "version": "1.2.2",
   "description": "An html and css template mapping library for bindings",
-  "main": "init.js",
+  "main": "czosnek.js",
   "scripts": {
     "test": "node ./test/run.js",
     "build": "node ./build.js"
@@ -38,7 +38,8 @@
   "eslintConfig": {
     "env": {
       "node": true,
-      "browser": true
+      "browser": true,
+      "mocha": true
     },
     "globals": {
       "define": true,
