@@ -11,12 +11,18 @@ window.czosnek = (function(){
       /* CSS STYLE TEMPLATES FOR COMPONENTS */
       __styles = {},
       
-      /* events associated with the dom */
-      __domEvents = Object.keys(HTMLElement.prototype).filter(function(v){return v.indexOf('on') === 0}),
-      
       __slice = Array.prototype.slice,
       
-      __byteToHex = Array.apply(null, Array(256)).map(function(v, i){return (i + 0x100).toString(16).substr(1);});
+      __byteToHex = Array.apply(null, Array(256)).map(function(v, i){return (i + 0x100).toString(16).substr(1);}),
+      
+      __EventList__ = Object.keys(HTMLElement.prototype).filter(function(v){return (v.indexOf('on') === 0);})
+      .concat([
+        'onDOMContentLoaded','onDOMAttributeNameChanged',
+        'onDOMAttrModified','onDOMCharacterDataModified',
+        'onDOMNodeInserted','onDOMNodeRemoved',
+        'onDOMSubtreeModified'])
+        .map(function(v){ return (v.toLowerCase()); });
+      
   /* ENDREGION */
   
   /* REGEX RULES */
@@ -86,7 +92,7 @@ window.czosnek = (function(){
     this.isAttr = isAttr;
     this.isFor = isFor;
     this.isStyle = isStyle;
-    this.isEvent = (!!isAttr && __domEvents.indexOf(localAttr) !== -1);
+    this.isEvent = (!!isAttr && __EventList__.indexOf(localAttr) !== -1);
     this.isInput = (node.tagName === 'INPUT');
     this.isRadio = (!!this.isInput && ['radio','checkbox'].indexOf(node.type) !== -1);
     
@@ -619,6 +625,7 @@ window.czosnek = (function(){
         nodeId = uuid(),
         localmap,
         item,
+        event,
         x = 0,
         len = attrs.length,
         text,
@@ -637,24 +644,53 @@ window.czosnek = (function(){
         mapText = splitText(text);
         lenn = mapText.length;
         i = 0;
-
-        for(i;i<lenn;i++)
+        event = __EventList__.indexOf(title);
+        
+        if(event === -1)
         {
-          item = mapText[i];
-          if(item.match(__matchInsert))
+          for(i;i<lenn;i++)
           {
-            maps.push(new mapObject(id, nodeId, item, mapText, 'insert', title, undefined, attrs[x], 'value', node, maps, true));
-            mapText[i] = maps[(maps.length - 1)];
-          }
-          else if(item.match(__matchText))
-          {
-            localmap = new mapObject(id, nodeId, item, mapText, 'standard', title, title, attrs[x], 'value', node, maps, true);
-              
-            maps.push(localmap);
-            mapText[i] = localmap;
+            item = mapText[i];
+            if(item.match(__matchInsert))
+            {
+              maps.push(new mapObject(id, nodeId, item, mapText, 'insert', title, undefined, attrs[x], 'value', node, maps, true));
+              mapText[i] = maps[(maps.length - 1)];
+            }
+            else if(item.match(__matchText))
+            {
+              localmap = new mapObject(id, nodeId, item, mapText, 'standard', title, title, attrs[x], 'value', node, maps, true);
 
-            /* LOCAL MAPS */
-            extensions.localmaps = localmap;
+              maps.push(localmap);
+              mapText[i] = localmap;
+
+              /* LOCAL MAPS */
+              extensions.localmaps = localmap;
+            }
+          }
+        }
+        else
+        {
+          if(lenn === 1)
+          {
+            item = mapText[0];
+            if(item.match(__matchInsert))
+            {
+              maps.push(new mapObject(id, nodeId, item, mapText, 'event', __EventList__[event], undefined, node, __EventList__[event], node, maps, true));
+              mapText[i] = maps[(maps.length - 1)];
+            }
+            if(item.match(__matchText))
+            {
+              localmap = new mapObject(id, nodeId, item, mapText, 'event', __EventList__[event], __EventList__[event], node, __EventList__[event], node, maps, true)
+              maps.push(localmap);
+              mapText[i] = localmap;
+              
+              /* LOCAL MAPS */
+              extensions.localmaps = localmap;
+            }
+          }
+          else
+          {
+            console.error(node, text, new Error('You can only have a single bind in events'))
           }
         }
       }

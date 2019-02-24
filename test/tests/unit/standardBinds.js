@@ -51,7 +51,11 @@ function standardBinds(describe, it, expect)
         {{local}} {
             yay: 500px
         }
-      `;
+      `,
+      templateEvent = `
+        <div onclick="{{click}}"></div>
+      `,
+      templateEventStyle = '{{local}} { color:blue; }';
   
   var methods = [
     checkMaps,
@@ -270,5 +274,21 @@ function standardBinds(describe, it, expect)
         isRadio: false
       }
     ]);
+    runCategory('event', templateEvent, templateEventStyle, 1,
+    [
+      { },
+      { }
+    ],
+    [
+      {
+        isDirty: false,
+        listener: 'onclick',
+        property: 'onclick',
+        localAttr: 'onclick',
+        type: 'event',
+        key: 'click',
+        isEvent: true
+      }
+    ])
   });
 }
