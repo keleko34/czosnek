@@ -1,4 +1,6 @@
-/* TODO: */
+/* TODO: 
+  Styles: change to using title for only the component name and data-component for the id
+*/
 
 window.czosnek = (function(){
   
@@ -390,7 +392,7 @@ window.czosnek = (function(){
     
     var styleTemplates = __styles[title],
         mainStyle = (document.head.querySelector('style[title="'+ title +'"]') || createStyleNode(title, styleTemplates[0])),
-        localStyle = createStyleNode(id, styleTemplates[1]);
+        localStyle = createStyleNode(title, styleTemplates[1], id);
     
     return [mainStyle, localStyle];
   }
@@ -499,13 +501,13 @@ window.czosnek = (function(){
     return maps;
   }
   
-  function createStyleNode(title, template)
+  function createStyleNode(title, template, id)
   {
     var styleNode = document.createElement('style');
     styleNode.type = 'text/css';
     styleNode.title =  title;
     styleNode.textContent = template;
-    
+    if(id) styleNode.setAttribute('component-id', id);
     document.head.appendChild(styleNode);
     
     return styleNode;

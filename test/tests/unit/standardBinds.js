@@ -134,7 +134,7 @@ function standardBinds(describe, it, expect)
       var test = new czosnek(component);
       var id = test.id;
       
-      var styleNode = document.head.querySelector('[title="'+id+'"]');
+      var styleNode = document.head.querySelector('[component-id="'+id+'"]');
       expect(styleNode.textContent.indexOf('[component-id="'+id+'"]')).to.not.equal(-1);
       done();
     });
