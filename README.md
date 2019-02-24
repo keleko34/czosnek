@@ -28,7 +28,7 @@ Getting started
 The script can be loaded both in the head and in the body. 
 All functionality is automatically loaded as soon as the file is loaded.
 ```
- <script src="/(node_modules|bower_modules)/czosnek/init.min.js"></script>
+ <script src="/(node_modules|bower_modules)/czosnek/czosnek.min.js"></script>
 ```
 
 To start using it you must register component templates you will want to use
