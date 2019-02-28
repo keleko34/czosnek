@@ -43,7 +43,7 @@ function standardBinds(describe, it, expect)
         }
       `,
       templateNode = `<div>
-    <{{test | helper}} class={{cool}}>
+    <{{test | helper}} class="{{cool}}">
         <div>{{help}}</div>
     </{{test | helper}}>
   </div>`,
@@ -55,7 +55,15 @@ function standardBinds(describe, it, expect)
       templateEvent = `
         <div onclick="{{click}}"></div>
       `,
-      templateEventStyle = '{{local}} { color:blue; }';
+      templateEventStyle = '{{local}} { color:blue; }',
+      templateStyleAttr = `
+        <div style="color:{{color}};{{extra}}:blue;"></div>
+      `,
+      templateStyleAttrStyle = '{{local}} { color:blue; }',
+      templateAttr = `
+        <div {{attr1}}="something" attr="{{test}} data" {{attr2}}="test" ></div>
+      `,
+      templateAttrStyle = '{{local}} { color:blue; }';
   
   var methods = [
     checkMaps,
@@ -264,9 +272,7 @@ function standardBinds(describe, it, expect)
     [
       {
         isDirty: false,
-        listener: 'html',
-        property: 'innerHTML',
-        localAttr: 'node',
+        type: 'node',
         keyLength: 1,
         key: 'test',
         isEvent: false,
@@ -289,6 +295,46 @@ function standardBinds(describe, it, expect)
         key: 'click',
         isEvent: true
       }
-    ])
+    ]);
+    runCategory('style', templateStyleAttr, templateStyleAttrStyle, 2,
+    [
+      {}, {}
+    ],
+    [
+      {
+        isDirty: false,
+        listener: 'color',
+        property: 'color',
+        localAttr: 'color',
+        type: 'style_standard'
+      },
+      {
+        isDirty: false,
+        type: 'style_name_standard'
+      }
+    ]);
+    runCategory('attr', templateAttr, templateAttrStyle, 3,
+    [
+      {}, {}, {}
+    ],
+    [
+      {
+        isDirty: true,
+        type: 'standard',
+        listener: 'attr',
+        localAttr: 'value',
+        key: 'test'
+      },
+      {
+        isDirty: false,
+        type: 'attr_name_standard',
+        key: 'attr1'
+      },
+      {
+        isDirty: false,
+        type: 'attr_name_standard',
+        key: 'attr2'
+      }
+    ]);
   });
 }

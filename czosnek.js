@@ -1,5 +1,27 @@
 /* TODO: 
-  Styles: change to using title for only the component name and data-component for the id
+  attach values to style binds if the bind is a title (work out value binds)
+*/
+
+/* Possible maps:
+   insert: single insert value item
+   standard: a standard bind item
+   loop: a for loop bind
+   event: an event attr was used
+   component_standard: an attr on a component, needs pointer
+   stylesheet: a bind on a stylesheet
+   node: a component that uses a bind for the component used
+   
+   ---- non standard attributes ----
+   attr_name_insert: an attr insert that uses a bind for its name
+   attr_name_standard: an attr that uses a dynamic bind for its name,
+   attr_insert: an insert attr value that is on a dynamic name bind
+   attr_standard: a dynamic attr value that is on a dynamic name bind
+   
+   ---- Style attribute ----
+   style_name_insert: an style insert that uses a bind for its name
+   style_name_standard: an style that uses a dynamic bind for its name,
+   style_insert: an insert style value that is on a dynamic name bind
+   style_standard: a dynamic style value that is on a dynamic name bind
 */
 
 window.czosnek = (function(){
@@ -32,7 +54,12 @@ window.czosnek = (function(){
   
   /* regex for searching for nodes */
   var __reNodes = /(<\/.*?>)/g,
+      __matchNodes = /(<.*?>)/g,
       
+      __matchNodeBind = /(<\/?{{.*?}}.*?>)/g,
+      __matchAttrNameBind = /({{(?:(?!{{).)*?}}=".*?")/g,
+      __matchStyleAttr = /(style=".*?{{.*?}}.*?")/g,
+      __replaceTagName = /(<\/?(\w.*?)\s.*?>)/g,
       /* splits binds out of text */
       __matchText = /(\{\{.*?\}\})/g,
       __splitText = /(\{\{.*?\}\})/g,
@@ -49,11 +76,17 @@ window.czosnek = (function(){
       __matchInsert = /(\{\{(\s*)\>(.*?)(\}\}))/g,
       __replaceEndingTag = /(<(?!input|img)(.*?) (.*?)\/>)/g,
       __replaceTag = /[(\<\\)\>]/g,
-      __replaceNodeName = /(\<\/?\{\{(.*?)\>)/g,
-      __replaceNodeBind = /(<({{.*?}})(.*))/g,
+      __replaceNodeNameStart = /(<({{(.*?)}})(.*?)>)/g,
+      __replaceNodeNameFinish = /(<\/({{(.*?)}})>)/g,
+      __matchStyles= /([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)(?=;)/g,
       __matchLocal = /({{>?local}})/g,
       __matchLocalStyle = /((.*?)({{>?local}}[\r\n\s\S]*?{(([\r\n\s\W\w]+?)|(.*?))(?:[^}])}(?=[\n\.\r\s]|$)))/g;
-      
+  
+  function getStyePropertyRegexp(mapText)
+  {
+    return new RegExp('(?=;?)(([A-Za-z-]+)(:)(\s*?'+mapText+'(;))','g')
+  }
+  
   /* ENDREGION */
   
   /* OBJECT CLASSES */
@@ -71,7 +104,7 @@ window.czosnek = (function(){
     })
   }
   
-  function mapObject(local_id, node_id, text, mapText, type, property, listener, local, localAttr, node, maps, isAttr, isFor, isPointer, isStyle, for_id)
+  function mapObject(local_id, node_id, text, mapText, type, property, listener, local, localAttr, node, maps, isAttr, isFor, isPointer, isStyle, for_id, nodeMaps)
   {
     this.key = (isFor ? getForKey(text) : getKey(text));
     /* Always force innerhtml */
@@ -91,6 +124,7 @@ window.czosnek = (function(){
     this.localAttr = localAttr;
     this.node = node;
     this.maps = maps;
+    this.nodeMaps = nodeMaps;
     this.isAttr = isAttr;
     this.isFor = isFor;
     this.isStyle = isStyle;
@@ -323,14 +357,15 @@ window.czosnek = (function(){
   {
     if(__templates[title] === undefined)
     {
-      __templates[title] = template
+      /* replaceCommentHTML replaces nodes with <{{nodename}}, <div {{attrname}}="", and <div style="color:{{color}};" type binds with comment nodes */
+      __templates[title] = replaceNonConformingHTML(template
       
       /* replace single line elements <div /> to have their correct ending tag </div>. ignores inputs and img tags */
       .replace(__replaceEndingTag, "<$2 $3></$2>")
       .replace(/( \>)/g, '>')
       
-      /* replaces <{{bind}}> tags as comments */
-      .replace(__replaceNodeName, '<!--$1-->');
+      .replace(__replaceNodeNameStart, '<kaleoreplacenode__ __kaleonodebind__="$2" $4>')
+      .replace(__replaceNodeNameFinish, '</kaleoreplacenode__>'));
       
       style = (style || '');
       
@@ -412,6 +447,44 @@ window.czosnek = (function(){
   /* BIND HELPERS */
   /* REGION */
   
+  function replaceNonConformingHTML(html)
+  {
+    /* get nodes by start and finish */
+    var nodes = html.match(__matchNodes),
+        matches,
+        match,
+        node,
+        len = nodes.length,
+        x = 0,
+        lenn,
+        i;
+    
+    for(x;x<len;x++)
+    {
+      node = nodes[x];
+      if(node.match(__matchAttrNameBind))
+      {
+        matches = node.match(__matchAttrNameBind);
+        lenn = matches.length;
+        i = 0;
+        for(i;i<lenn;i++)
+        {
+          match = matches[i];
+          matches[i] = matches[i].replace('=',':').replace(/["]/g, "'") + ';'
+          nodes[x] = node.replace(match, '');
+        }
+        nodes[x] = node.replace('>', '__kaleoattrsbind__="' + matches.join('') + '">')
+      }
+      
+      if(node.match(__matchStyleAttr))
+      {
+        nodes[x] = node.replace('style=', '__kaleostylebind__=');
+      }
+      html = html.replace(node, nodes[x]);
+    }
+    return html;
+  }
+  
   function uuid()
   {
     var rnds = new Uint8Array(8).map(function(){return Math.floor((Math.random() * 99) + 1)}),
@@ -443,7 +516,11 @@ window.czosnek = (function(){
         break;
       /* Standard Element */
       default:
-        if(isUnknown(node))
+        if(node.nodeName === 'KALEOREPLACENODE__')
+        {
+          mapMapNode(node, parent, maps, id);
+        }
+        else if(isUnknown(node))
         {
           mapComponentNode(node, parent, maps, id);
         }
@@ -567,59 +644,6 @@ window.czosnek = (function(){
     }
   }
   
-  function mapCommentNode(node, parent, maps, id)
-  {
-    if(!node.textContent.match(__matchText)) return;
-    
-    var text = node.textContent,
-        extensions = node.__czosnekExtensions__,
-        localmap,
-        mapText = [text.replace(__replaceNodeBind, '$2')],
-        item = mapText[0],
-        nodeId = uuid();
-        
-    if(item.match(__matchText))
-    {
-      /* TODO: Should we allow multiple inner hot swappable components? */
-      var key = getKey(item),
-          reg = new RegExp('(\<\/\{\{\s?'+key+'(.*?)\>)','g'),
-          nodeChildren = [],
-          sibling,
-          next;
-      
-      localmap = new mapObject(id, nodeId, item, mapText, 'node', 'innerHTML', 'html', node, 'node', parent, maps);
-
-      maps.push(localmap);
-      mapText[0] = localmap;
-
-      /* LOCAL MAPS */
-      extensions.localmaps = localmap;
-
-      /* POINTER NODE TYPE */
-      /* TODO: map to unknown component comment attributes */
-      // node.__czosnekExtensions__.pointers.push(localmap);
-
-      sibling = node.nextSibling;
-      
-      while(!sibling.textContent.match(reg))
-      {
-        next = sibling.nextSibling;
-        nodeChildren.push(sibling);
-        parent.removeChild(sibling);
-
-        var div = document.createElement('div');
-        div.appendChild(sibling);
-        createMaps(div, node, maps, id);
-        sibling = next;
-      }
-      parent.removeChild(node);
-      parent.removeChild(sibling);
-
-      /* double check that it is shared among object locations */
-      mapText[0].nodeChildren = nodeChildren;
-    }
-  }
-  
   function mapElementNode(node, parent, maps, id)
   {
     var attrs = __slice.call(node.attributes),
@@ -639,10 +663,17 @@ window.czosnek = (function(){
     for(x;x<len;x++)
     {
       text = attrs[x].value;
-      
-      if(text.match(__matchText))
+      title = attrs[x].name;
+      if(title === '__kaleoattrsbind__')
       {
-        title = attrs[x].name;
+        mapAttrName(node, text, maps, id, nodeId);
+      }
+      else if(title === '__kaleostylebind__')
+      {
+        mapStyleAttr(node, text, maps, id, nodeId);
+      }
+      else if(text.match(__matchText))
+      {
         mapText = splitText(text);
         lenn = mapText.length;
         i = 0;
@@ -717,10 +748,17 @@ window.czosnek = (function(){
     for(x;x<len;x++)
     {
       text = attrs[x].value;
-      
-      if(text.match(__matchText))
+      title = attrs[x].name;
+      if(title === '__kaleoattrsbind__')
       {
-        title = attrs[x].name;
+        mapAttrName(node, text, maps, id, nodeId);
+      }
+      else if(title === '__kaleostylebind__')
+      {
+        mapStyleAttr(node, text, maps, id, nodeId);
+      }
+      else if(text.match(__matchText))
+      {
         mapText = splitText(text);
         lenn = mapText.length;
         i = 0;
@@ -735,7 +773,7 @@ window.czosnek = (function(){
           }
           else if(item.match(__matchText))
           {
-            localmap = new mapObject(id, nodeId, item, mapText, 'insert', title, title, attrs[x], 'value', node, maps, true);
+            localmap = new mapObject(id, nodeId, item, mapText, 'component_standard', title, title, attrs[x], 'value', node, maps, true);
 
             maps.push(localmap);
             mapText[i] = localmap;
@@ -766,6 +804,7 @@ window.czosnek = (function(){
         u = undefined,
         f = false;
     
+    /* TODO: if this is a clean bind as a style value allow two-way binding */
     for(x;x<len;x++)
     {
       item = mapText[x];
@@ -784,7 +823,7 @@ window.czosnek = (function(){
       /* MATCH TEXT TYPE */
       else if(item.match(__matchText))
       {
-        localmap = new mapObject(id, nodeId, item, mapText, 'standard', 'innerHTML', 'html', node, 'textContent', node, maps, f, f, f, true);
+        localmap = new mapObject(id, nodeId, item, mapText, 'stylesheet', 'innerHTML', 'html', node, 'textContent', node, maps, f, f, f, true);
             
         maps.push(localmap);
         mapText[x] = localmap;
@@ -795,6 +834,180 @@ window.czosnek = (function(){
     }
     
     node.textContent = outputText.join('');
+  }
+  
+  /* creates dynamic map that changes the element component, also keeps associated attr, style, event and html binds */
+  function mapMapNode(node, parent, maps, id)
+  {
+    var attrs = __slice.call(node.attributes),
+        nodeMap,
+        nodeMaps = [],
+        nodeId = uuid(),
+        item,
+        x = 0,
+        len = attrs.length,
+        text,
+        title,
+        mapText,
+        i,
+        lenn;
+      
+      for(x;x<len;x++)
+      {
+        text = attrs[x].value;
+        title = attrs[x].name;
+        if(title === '__kaleonodebind__')
+        {
+          mapText = splitText(text);
+          item = mapText[0];
+          
+          /* create nodemap */
+          nodeMap = new mapObject(id, nodeId, item, mapText, 'node', title, undefined, undefined, undefined, node, maps, undefined, undefined, undefined, undefined, undefined, nodeMaps);
+          maps.push(nodeMap);
+        }
+        else if(title === '__kaleoattrsbind__')
+        {
+          mapAttrName(node, text, nodeMaps, id, nodeId);
+        }
+        else if(title === '__kaleostylebind__')
+        {
+          mapStyleAttr(node, text, nodeMaps, id, nodeId);
+        }
+        else if(text.match(__matchText))
+        {
+          mapText = splitText(text);
+          lenn = mapText.length;
+          i = 0;
+          for(i;i<lenn;i++)
+          {
+            item = mapText[i];
+            if(item.match(__matchInsert))
+            {
+              nodeMaps.push(new mapObject(id, nodeId, item, mapText, 'insert', title, undefined, attrs[x], 'value', node, maps, true));
+            }
+            else if(item.match(__matchText))
+            {
+              nodeMaps.push(new mapObject(id, nodeId, item, mapText, 'component_standard', title, title, attrs[x], 'value', node, maps, true));
+            }
+          }
+        }
+      }
+  }
+  
+  /* creates dyanmic map that changes the attr name */
+  function mapAttrName(node, text, maps, id, nodeId)
+  {
+    var attrs = text.match(__matchStyles),
+        mapText,
+        attr,
+        title,
+        value,
+        item,
+        len = attrs.length,
+        localMap,
+        x = 0,
+        lenn,
+        i = 0;
+    
+    for(x;x<len;x++)
+    {
+      attr = attrs[x].split(':');
+      title = attr[0];
+      value = attr[1];
+      
+      if(title.match(__matchInsert))
+      {
+        localMap = new mapObject(id, nodeId, title, [title], 'attr_name_insert', title, undefined, undefined, undefined, node, maps)
+        maps.push(localMap)
+      }
+      else if(title.match(__matchText))
+      {
+        localMap = new mapObject(id, nodeId, title, [title], 'attr_name_standard', title, undefined, undefined, undefined, node, maps)
+        maps.push(localMap);
+      }
+      
+      mapText = splitText(value);
+      lenn = mapText.length;
+      i = 0;
+      
+      for(i;i<lenn;i++)
+      {
+        item = mapText[i];
+        if(item.match(__matchInsert))
+        {
+          localMap = new mapObject(id, nodeId, item, mapText, 'attr_insert', title, title, undefined, undefined, node, maps)
+          maps.push(localMap)
+        }
+        else if(item.match(__matchText))
+        {
+          localMap = new mapObject(id, nodeId, item, mapText, 'attr_standard', title, title, undefined, undefined, node, maps)
+          maps.push(localMap)
+        }
+        else
+        {
+          localMap = item;
+        }
+        mapText[i] = localMap;
+      }
+    }
+  }
+  
+  /* map style takes all styles and maps to the property */
+  function mapStyleAttr(node, text, maps, id, nodeId)
+  {
+    var styles = text.match(__matchStyles),
+        mapText,
+        style,
+        title,
+        value,
+        item,
+        len = styles.length,
+        localMap,
+        x = 0,
+        lenn,
+        i = 0;
+    
+    for(x;x<len;x++)
+    {
+      style = styles[x].split(':');
+      title = style[0];
+      value = style[1];
+      
+      if(title.match(__matchInsert))
+      {
+        localMap = new mapObject(id, nodeId, title, [title], 'style_name_insert', undefined, undefined, undefined, undefined, node, maps)
+        maps.push(localMap)
+      }
+      else if(title.match(__matchText))
+      {
+        localMap = new mapObject(id, nodeId, title, [title], 'style_name_standard', undefined, undefined, undefined, undefined, node, maps)
+        maps.push(localMap)
+      }
+      
+      mapText = splitText(value);
+      lenn = mapText.length;
+      i = 0;
+      
+      for(i;i<lenn;i++)
+      {
+        item = mapText[i];
+        if(item.match(__matchInsert))
+        {
+          localMap = new mapObject(id, nodeId, item, mapText, 'style_insert', title, title, node.style, title, node, maps)
+          maps.push(localMap)
+        }
+        else if(item.match(__matchText))
+        {
+          localMap = new mapObject(id, nodeId, item, mapText, 'style_standard', title, title, node.style, title, node, maps)
+          maps.push(localMap)
+        }
+        else
+        {
+          localMap = item;
+        }
+        mapText[i] = localMap;
+      }
+    }
   }
   
   /* ENDREGION */
