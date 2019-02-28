@@ -78,7 +78,7 @@ window.czosnek = (function(){
       __replaceNodeNameFinish = /(<\/({{(.*?)}})>)/g,
       __matchStyles= /([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)(?=;)/g,
       __matchLocal = /({{>?local}})/g,
-      __matchLocalStyle = /((.*?)({{>?local}}[\r\n\s\S]*?{(([\r\n\s\W\w]+?)|(.*?))(?:[^}])}(?=[\n\.\r\s]|$)))/g;
+      __matchLocalStyle = /(([^}][\s\w\.]+?)?{{>?local}}[\r\n\s\S]*?{(([\r\n\s\W\w]+?)|(.*?))(?:[^}])}(?=[\n\.\r\s]|$))/g;
   
   function getStyePropertyRegexp(mapText)
   {
@@ -425,7 +425,7 @@ window.czosnek = (function(){
     if(!__templates[title]) return console.error("ERR: Component "+title+" does not exist, make sure to create it", new Error().stack);
     
     var styleTemplates = __styles[title],
-        mainStyle = (document.head.querySelector('style[title="'+ title +'"]') || createStyleNode(title, styleTemplates[0])),
+        mainStyle = (document.head.querySelector('style[component="'+ title +'"]') || createStyleNode(title, styleTemplates[0])),
         localStyle = createStyleNode(title, styleTemplates[1], id);
     
     return [mainStyle, localStyle];
@@ -811,6 +811,7 @@ window.czosnek = (function(){
       if (item.match(__matchLocal))
       {
         outputText[x] = '[component-id="'+ id +'"]';
+        mapText[x] = outputText[x];
       }
       /* MATCH INSERT TYPE */
       else if(item.match(__matchInsert))
