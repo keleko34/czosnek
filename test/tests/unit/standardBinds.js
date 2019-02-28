@@ -56,6 +56,10 @@ function standardBinds(describe, it, expect)
         <div onclick="{{click}}"></div>
       `,
       templateEventStyle = '{{local}} { color:blue; }',
+      templateStyle = `<div></div>`,
+      templateStyleStyle = `
+        {{local}} { {{setColor}}:blue; }
+      `,
       templateStyleAttr = `
         <div style="color:{{color}};{{extra}}:blue;"></div>
       `,
@@ -125,11 +129,22 @@ function standardBinds(describe, it, expect)
       for(var x=0,len=objects.length;x<len;x++)
       {
         var filter = maps[x],
-            keys = Object.keys(objects[x]);
+            keys = Object.keys(objects[x]),
+            key;
         
         for(var i=0,lenn=keys.length;i<lenn;i++)
         {
-          expect(filter[keys[i]]).to.equal(objects[x][keys[i]]);
+          key = objects[x][keys[i]];
+          if(typeof key === 'object')
+          {
+            key.forEach(function(v,z){
+              expect(filter[keys[i]][z]).to.equal(v);
+            })
+          }
+          else
+          {
+            expect(filter[keys[i]]).to.equal(key);
+          }
         }
       }
       done();
@@ -296,7 +311,18 @@ function standardBinds(describe, it, expect)
         isEvent: true
       }
     ]);
-    runCategory('style', templateStyleAttr, templateStyleAttrStyle, 2,
+    runCategory('style', templateStyle, templateStyleStyle, 1,
+    [{}],
+    [
+      {
+        isDirty: true,
+        listener: 'html',
+        localAttr: 'textContent',
+        key: 'setColor',
+        values: [ 'blue' ]
+      }
+    ]);
+    runCategory('styleAttr', templateStyleAttr, templateStyleAttrStyle, 2,
     [
       {}, {}
     ],
