@@ -509,12 +509,10 @@ window.czosnek = (function(){
       case 3:
         mapTextNode(node, parent, maps, id);
         break;
-      /* Comment Node */
-      case 8:
-        mapCommentNode(node, parent, maps, id);
-        break;
       /* Standard Element */
       default:
+        node.setAttribute('component-id', id);
+        node.setAttribute('node-id', uuid())
         if(node.nodeName === 'KALEOREPLACENODE__')
         {
           mapMapNode(node, parent, maps, id);
@@ -797,10 +795,8 @@ window.czosnek = (function(){
         mapText = splitText(text),
         outputText = [],
         localmap,
-        localMapText = [],
         item,
         x = 0,
-        i = 0,
         len = mapText.length,
         nodeId = localid,
         u = undefined,
