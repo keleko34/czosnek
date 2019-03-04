@@ -1,6 +1,6 @@
 /* TODO: */
 
-/* Possible maps:
+/* Map types:
    insert: single insert value item
    standard: a standard bind item
    loop: a for loop bind
@@ -80,11 +80,6 @@ window.czosnek = (function(){
       __matchLocal = /({{>?local}})/g,
       __matchLocalStyle = /(([^}][\s\w\.]+?)?{{>?local}}[\r\n\s\S]*?{(([\r\n\s\W\w]+?)|(.*?))(?:[^}])}(?=[\n\.\r\s]|$))/g;
   
-  function getStyePropertyRegexp(mapText)
-  {
-    return new RegExp('(?=;?)(([A-Za-z-]+)(:)(\s*?'+mapText+'(;))','g')
-  }
-  
   /* ENDREGION */
   
   /* OBJECT CLASSES */
@@ -102,40 +97,97 @@ window.czosnek = (function(){
     })
   }
   
-  function mapObject(local_id, node_id, text, mapText, type, property, listener, local, localAttr, node, maps, isAttr, isFor, isPointer, isStyle, for_id, nodeMaps)
+  function mapObject(obj)
   {
-    this.key = (isFor ? getForKey(text) : getKey(text));
-    /* Always force innerhtml */
-    this.type = (this.key === 'innerHTML' ? 'insert' : type);
-    this.text = text;
-    this.mapText = mapText;
+    /* The key of the bind */
+    this.key = (obj.isFor ? getForKey(obj.text) : getKey(obj.text));
+    
+    /* SEE map types comment */
+    this.type = (this.key === 'innerHTML' ? 'insert' : obj.type);
+    
+    /* The entire text associated with the bind */
+    this.text = obj.text;
+    
+    /* The entire text as an array with binds being map objects */
+    this.mapText = obj.mapText;
+    
+    /* The length of the key in case it is a deep proeprty key eg. prop.innerprop.mostinnerprop */
     this.keyLength = this.key.split('.').length;
+    
+    /* The last key in the key string in case its a deep property key */
     this.localKey = this.key.split('.').pop();
-    this.filters = parseFilterTypes(getfilters(text));
-    this.forComponent = (isFor ? getForComponent(text) : undefined);
-    this.forId = for_id;
-    this.isPointer = isPointer;
-    this.isDirty = (mapText.length !== 1 || this.key === 'innerHTML');
-    this.listener = listener;
-    this.property = property;
-    this.local = local
-    this.localAttr = localAttr;
-    this.node = node;
-    this.maps = maps;
-    this.nodeMaps = nodeMaps;
-    this.isAttr = isAttr;
-    this.isFor = isFor;
-    this.isStyle = isStyle;
-    this.isEvent = (!!isAttr && __EventList__.indexOf(localAttr) !== -1);
-    this.isInput = (node.tagName === 'INPUT');
-    this.isRadio = (!!this.isInput && ['radio','checkbox'].indexOf(node.type) !== -1);
+    
+    /* Filters attache to the bind */
+    this.filters = parseFilterTypes(getfilters(this.text));
+    
+    /* The unique id for the for loop */
+    this.forId = obj.for_id;
+    
+    /* Whether this bind was associated with a component */
+    this.isPointer = obj.isPointer;
+    
+    /* Tells if the bind had extra content with it, this effects whether a two-way bind is allowed */
+    this.isDirty = (this.mapText.length !== 1 || this.key === 'innerHTML');
+    
+    /* The dom listener to listen for changes */
+    this.listener = obj.listener;
+    
+    /* The associated property of the node */
+    this.property = obj.property;
+    
+    /* The local object node eg (Text, Element, Attr) */
+    this.local = obj.local
+    
+    /* The local property associated with the local object node that will update the dom */
+    this.localAttr = obj.localAttr;
+    
+    /* The associated Element of the local node, if Text or Attr then this is their parent */
+    this.node = obj.node;
+    
+    /* All the maps associated with this component */
+    this.maps = obj.maps;
+    
+    /* the bind for a dynamic nodeName bind */
+    this.nodeMaps = obj.nodeMaps;
+    
+    /* The index that this object is in the map array */
+    this.mapIndex = obj.mapIndex;
+    
+    /* The index that this object is in the mapText array */
+    this.mapTextIndex = obj.mapTextIndex;
+    
+    /* if this bind is an attribute bind */
+    this.isAttr = obj.isAttr;
+    
+    /* if this bind is a for loop bind */
+    this.isFor = obj.isFor;
+    
+    /* if this bind is a style bind */
+    this.isStyle = obj.isStyle;
+    
+    /* if this bind is an inline style */
+    this.isInlineStyle = obj.isInlineStyle;
+    
+    /* if this bind is an event bind */
+    this.isEvent = (obj.isEvent || (!!this.isAttr && __EventList__.indexOf(this.localAttr) !== -1));
+    
+    /* if this bind is a value bind on an input */
+    this.isInput = (this.node.tagName === 'INPUT');
+    
+    /* if this bind is a value bind on a radio element */
+    this.isRadio = (!!this.isInput && ['radio','checkbox'].indexOf(this.node.type) !== -1);
+    
+    /* IN case its a for bind, this is the component name with it */
+    this.forComponent = (this.isFor ? getForComponent(this.text) : undefined);
+    
+    /* Extra property to hold values assocated with a style or attr name bind eg {{attr}}="This is values" similiar to mapObject but gets passed to the {{attr}} bind in the event it is a function */
     this.values = [];
     
-    if(!isStyle)
+    if(!this.isStyle)
     {
       Object.defineProperties(this, {
-        localId: setDescriptorAttribute('component-id', local_id, node),
-        nodeId: setDescriptorAttribute('node-id', (local_id + '-' + node_id), node)
+        localId: setDescriptorAttribute('component-id', obj.local_id, this.node),
+        nodeId: setDescriptorAttribute('node-id', (obj.local_id + '-' + obj.node_id), this.node)
       });
     }
   }
@@ -598,9 +650,7 @@ window.czosnek = (function(){
         item,
         x = 0,
         len = mapText.length,
-        nodeId = uuid(),
-        u = undefined,
-        f = false;
+        nodeId = uuid();
     
     for(x;x<len;x++)
     {
@@ -609,7 +659,20 @@ window.czosnek = (function(){
       /* MATCH INSERT TYPE */
       if(item.match(__matchInsert))
       {
-        maps.push(new mapObject(id, nodeId, item, mapText, 'insert', 'innerHTML', u, node, 'textContent', parent, maps));
+        maps.push(new mapObject({
+          local_id: id,
+          node_id: id,
+          mapIndex: maps.length,
+          mapTextIndex: x,
+          text: item,
+          mapText: mapText,
+          maps: maps,
+          type: 'insert',
+          property: 'innerHTML',
+          local: node,
+          localAttr: 'textContent',
+          node: parent
+        }));
         mapText[x] = maps[(maps.length - 1)];
       }
       
@@ -618,7 +681,23 @@ window.czosnek = (function(){
       {
         if(mapText.length !== 1) return console.error('ERR: loop binds can not include adjacent content,', text, 'in', parent);
         
-        localmap = new mapObject(id, nodeId, item, mapText, 'loop', 'innerHTML', 'html', node, 'textContent', parent, maps, f, true, f, f, f, uuid());
+        localmap = new mapObject({
+          local_id: id,
+          node_id: nodeId,
+          mapIndex: maps.length,
+          mapTextIndex: 0,
+          text: item,
+          mapText: mapText,
+          maps: maps,
+          type: 'loop',
+          property: 'innerHTML',
+          listener: 'html',
+          local: node,
+          localAttr: 'textContent',
+          node: parent,
+          isFor: true,
+          forId: uuid()
+        });
             
         maps.push(localmap);
         mapText[x] = localmap;
@@ -630,7 +709,21 @@ window.czosnek = (function(){
       /* MATCH TEXT TYPE */
       else if(item.match(__matchText))
       {
-        localmap = new mapObject(id, nodeId, item, mapText, 'standard', 'innerHTML', 'html', node, 'textContent', parent, maps);
+        localmap = new mapObject({
+          local_id: id,
+          node_id: nodeId,
+          mapIndex: maps.length,
+          mapTextIndex: x,
+          text: item,
+          mapText: mapText,
+          maps: maps,
+          type: 'standard',
+          property: 'innerHTML',
+          listener: 'html',
+          local: node,
+          localAttr: 'textContent',
+          node: parent
+        });
             
         maps.push(localmap);
         mapText[x] = localmap;
@@ -663,11 +756,11 @@ window.czosnek = (function(){
       title = attrs[x].name;
       if(title === '__kaleoattrsbind__')
       {
-        mapAttrName(node, text, maps, id, nodeId);
+        mapAttrName(node, text, maps, id, nodeId, true);
       }
       else if(title === '__kaleostylebind__')
       {
-        mapStyleAttr(node, text, maps, id, nodeId);
+        mapStyleAttr(node, text, maps, id, nodeId, true);
       }
       else if(text.match(__matchText))
       {
@@ -683,12 +776,41 @@ window.czosnek = (function(){
             item = mapText[i];
             if(item.match(__matchInsert))
             {
-              maps.push(new mapObject(id, nodeId, item, mapText, 'insert', title, undefined, attrs[x], 'value', node, maps, true));
+              maps.push(new mapObject({
+                local_id: id,
+                node_id: nodeId,
+                mapIndex: maps.length,
+                mapTextIndex: i,
+                text: item,
+                mapText: mapText,
+                maps: maps,
+                type: 'insert',
+                property: title,
+                local: attrs[x],
+                localAttr: 'value',
+                node: node,
+                isAttr: true
+              }));
               mapText[i] = maps[(maps.length - 1)];
             }
             else if(item.match(__matchText))
             {
-              localmap = new mapObject(id, nodeId, item, mapText, 'standard', title, title, attrs[x], 'value', node, maps, true);
+              localmap = new mapObject({
+                local_id: id,
+                node_id: nodeId,
+                mapIndex: maps.length,
+                mapTextIndex: i,
+                text: item,
+                mapText: mapText,
+                maps: maps,
+                type: 'standard',
+                property: title,
+                listener: title,
+                local: attrs[x],
+                localAttr: 'value',
+                node: node,
+                isAttr: true
+              });
 
               maps.push(localmap);
               mapText[i] = localmap;
@@ -705,12 +827,41 @@ window.czosnek = (function(){
             item = mapText[0];
             if(item.match(__matchInsert))
             {
-              maps.push(new mapObject(id, nodeId, item, mapText, 'event', __EventList__[event], undefined, node, __EventList__[event], node, maps, true));
+              maps.push(new mapObject({
+                local_id: id,
+                node_id: nodeId,
+                mapIndex: maps.length,
+                mapTextIndex: i,
+                text: item,
+                mapText: mapText,
+                maps: maps,
+                type: 'event',
+                property: __EventList__[event],
+                local: node,
+                localAttr: __EventList__[event],
+                node: node,
+                isEvent: true
+              }));
               mapText[i] = maps[(maps.length - 1)];
             }
             if(item.match(__matchText))
             {
-              localmap = new mapObject(id, nodeId, item, mapText, 'event', __EventList__[event], __EventList__[event], node, __EventList__[event], node, maps, true)
+              localmap = new mapObject({
+                local_id: id,
+                node_id: nodeId,
+                mapIndex: maps.length,
+                mapTextIndex: i,
+                text: item,
+                mapText: mapText,
+                maps: maps,
+                type: 'event',
+                property: __EventList__[event],
+                listener: __EventList__[event],
+                local: node,
+                localAttr: __EventList__[event],
+                node: node,
+                isEvent: true
+              })
               maps.push(localmap);
               mapText[i] = localmap;
               
@@ -765,12 +916,42 @@ window.czosnek = (function(){
           item = mapText[i];
           if(item.match(__matchInsert))
           {
-            maps.push(new mapObject(id, nodeId, item, mapText, 'insert', title, undefined, attrs[x], 'value', node, maps, true));
+            maps.push(new mapObject({
+              local_id: id,
+              node_id: nodeId,
+              mapIndex: maps.length,
+              mapTextIndex: i,
+              text: item,
+              mapText: mapText,
+              maps: maps,
+              type: 'insert',
+              property: title,
+              local: attrs[x],
+              localAttr: 'value',
+              node: node,
+              isAttr: true
+            }));
             mapText[i] = maps[(maps.length - 1)];
           }
           else if(item.match(__matchText))
           {
-            localmap = new mapObject(id, nodeId, item, mapText, 'component_standard', title, title, attrs[x], 'value', node, maps, true);
+            localmap = new mapObject({
+              local_id: id,
+              node_id: nodeId,
+              mapIndex: maps.length,
+              mapTextIndex: i,
+              text: item,
+              mapText: mapText,
+              maps: maps,
+              type: 'component_standard',
+              property: title,
+              listener: title,
+              local: attrs[x],
+              localAttr: 'value',
+              node: node,
+              isAttr: true,
+              isPointer: true
+            });
 
             maps.push(localmap);
             mapText[i] = localmap;
@@ -798,9 +979,7 @@ window.czosnek = (function(){
         item,
         x = 0,
         len = mapText.length,
-        nodeId = localid,
-        u = undefined,
-        f = false;
+        nodeId = localid;
     
     /* TODO: if this is a clean bind as a style value allow two-way binding */
     for(x;x<len;x++)
@@ -816,7 +995,21 @@ window.czosnek = (function(){
       /* MATCH INSERT TYPE */
       else if(item.match(__matchInsert))
       {
-        maps.push(new mapObject(id, nodeId, item, mapText, 'insert', 'html', u, node, 'textContent', node, maps, f, f, f, true));
+        maps.push(new mapObject({
+          local_id: id,
+          node_id: nodeId,
+          mapIndex: maps.length,
+          mapTextIndex: x,
+          text: item,
+          mapText: mapText,
+          maps: maps,
+          type: 'insert',
+          property: 'innerHTML',
+          local: node,
+          localAttr: 'textContent',
+          node: node,
+          isStyle: true
+        }));
         mapText[x] = maps[(maps.length - 1)];
         if(titleMap)
         {
@@ -829,7 +1022,22 @@ window.czosnek = (function(){
       /* MATCH TEXT TYPE */
       else if(item.match(__matchText))
       {
-        localmap = new mapObject(id, nodeId, item, mapText, 'stylesheet', 'innerHTML', 'html', node, 'textContent', node, maps, f, f, f, true);
+        localmap = new mapObject({
+          local_id: id,
+          node_id: nodeId,
+          mapIndex: maps.length,
+          mapTextIndex: x,
+          text: item,
+          mapText: mapText,
+          maps: maps,
+          type: 'stylesheet',
+          property: 'innerHTML',
+          listener: 'html',
+          local: node,
+          localAttr: 'textContent',
+          node: node,
+          isStyle: true
+        });
             
         maps.push(localmap);
         mapText[x] = localmap;
@@ -863,7 +1071,6 @@ window.czosnek = (function(){
   function mapMapNode(node, parent, maps, id)
   {
     var attrs = __slice.call(node.attributes),
-        nodeMap,
         nodeMaps = [],
         nodeId = uuid(),
         item,
@@ -885,16 +1092,27 @@ window.czosnek = (function(){
           item = mapText[0];
           
           /* create nodemap */
-          nodeMap = new mapObject(id, nodeId, item, mapText, 'node', title, undefined, undefined, undefined, node, maps, undefined, undefined, undefined, undefined, undefined, nodeMaps);
-          maps.push(nodeMap);
+          maps.push(new mapObject({
+            local_id: id,
+            node_id: nodeId,
+            mapIndex: maps.length,
+            mapTextIndex: 0,
+            text: item,
+            mapText: mapText,
+            maps: maps,
+            type: 'node',
+            property: title,
+            node: node,
+            nodeMaps: nodeMaps
+          }));
         }
         else if(title === '__kaleoattrsbind__')
         {
-          mapAttrName(node, text, nodeMaps, id, nodeId);
+          mapAttrName(node, text, nodeMaps, id, nodeId, true);
         }
         else if(title === '__kaleostylebind__')
         {
-          mapStyleAttr(node, text, nodeMaps, id, nodeId);
+          mapStyleAttr(node, text, nodeMaps, id, nodeId, true);
         }
         else if(text.match(__matchText))
         {
@@ -906,11 +1124,41 @@ window.czosnek = (function(){
             item = mapText[i];
             if(item.match(__matchInsert))
             {
-              nodeMaps.push(new mapObject(id, nodeId, item, mapText, 'insert', title, undefined, attrs[x], 'value', node, maps, true));
+              nodeMaps.push(new mapObject({
+                local_id: id,
+                node_id: nodeId,
+                mapIndex: maps.length,
+                mapTextIndex: i,
+                text: item,
+                mapText: mapText,
+                maps: maps,
+                type: 'insert',
+                property: title,
+                local: attrs[x],
+                localAttr: 'value',
+                node: node,
+                isAttr: true
+              }));
             }
             else if(item.match(__matchText))
             {
-              nodeMaps.push(new mapObject(id, nodeId, item, mapText, 'component_standard', title, title, attrs[x], 'value', node, maps, true));
+              nodeMaps.push(new mapObject({
+                local_id: id,
+                node_id: nodeId,
+                mapIndex: maps.length,
+                mapTextIndex: i,
+                text: item,
+                mapText: mapText,
+                maps: maps,
+                type: 'component_standard',
+                property: title,
+                listener: title,
+                local: attrs[x],
+                localAttr: 'value',
+                node: node,
+                isAttr: true,
+                isPointer: true
+              }));
             }
           }
         }
@@ -918,7 +1166,7 @@ window.czosnek = (function(){
   }
   
   /* creates dyanmic map that changes the attr name */
-  function mapAttrName(node, text, maps, id, nodeId)
+  function mapAttrName(node, text, maps, id, nodeId, isComponent)
   {
     var attrs = text.match(__matchStyles),
         mapText,
@@ -941,12 +1189,35 @@ window.czosnek = (function(){
       
       if(title.match(__matchInsert))
       {
-        titleMap = new mapObject(id, nodeId, title, [title], 'attr_name_insert', title, undefined, undefined, undefined, node, maps)
+        titleMap = new mapObject({
+          local_id: id,
+          node_id: nodeId,
+          mapIndex: maps.length,
+          mapTextIndex: 0,
+          text: title,
+          mapText: [title],
+          maps: maps,
+          type: 'attr_name_insert',
+          property: title,
+          node: node
+        })
         maps.push(titleMap)
       }
       else if(title.match(__matchText))
       {
-        titleMap = new mapObject(id, nodeId, title, [title], 'attr_name_standard', title, undefined, undefined, undefined, node, maps)
+        titleMap = new mapObject({
+          local_id: id,
+          node_id: nodeId,
+          mapIndex: maps.length,
+          mapTextIndex: 0,
+          text: title,
+          mapText: [title],
+          maps: maps,
+          type: 'attr_name_standard',
+          property: title,
+          node: node,
+          isPointer: isComponent
+        })
         maps.push(titleMap);
       }
       
@@ -959,12 +1230,40 @@ window.czosnek = (function(){
         item = mapText[i];
         if(item.match(__matchInsert))
         {
-          localMap = new mapObject(id, nodeId, item, mapText, 'attr_insert', title, title, undefined, undefined, node, maps);
+          localMap = new mapObject({
+            local_id: id,
+            node_id: nodeId,
+            mapIndex: maps.length,
+            mapTextIndex: i,
+            text: item,
+            mapText: mapText,
+            maps: maps,
+            type: 'attr_insert',
+            property: title,
+            listener: title,
+            node: node,
+            isAttr: true,
+            isPointer: isComponent
+          });
           maps.push(localMap);
         }
         else if(item.match(__matchText))
         {
-          localMap = new mapObject(id, nodeId, item, mapText, 'attr_standard', title, title, undefined, undefined, node, maps);
+          localMap = new mapObject({
+            local_id: id,
+            node_id: nodeId,
+            mapIndex: maps.length,
+            mapTextIndex: i,
+            text: item,
+            mapText: mapText,
+            maps: maps,
+            type: 'attr_standard',
+            property: title,
+            listener: title,
+            node: node,
+            isAttr: true,
+            isPointer: isComponent
+          });
           maps.push(localMap);
         }
         else
@@ -978,7 +1277,7 @@ window.czosnek = (function(){
   }
   
   /* map style takes all styles and maps to the property */
-  function mapStyleAttr(node, text, maps, id, nodeId)
+  function mapStyleAttr(node, text, maps, id, nodeId, isComponent)
   {
     var styles = text.match(__matchStyles),
         mapText,
@@ -1001,12 +1300,36 @@ window.czosnek = (function(){
       
       if(title.match(__matchInsert))
       {
-        titleMap = new mapObject(id, nodeId, title, [title], 'style_name_insert', undefined, undefined, undefined, undefined, node, maps)
+        titleMap = new mapObject({
+          local_id: id,
+          node_id: nodeId,
+          mapIndex: maps.length,
+          mapTextIndex: 0,
+          text: title,
+          mapText: [title],
+          maps: maps,
+          type: 'style_name_insert',
+          property: title,
+          node: node,
+          isPointer: isComponent
+        })
         maps.push(titleMap)
       }
       else if(title.match(__matchText))
       {
-        titleMap = new mapObject(id, nodeId, title, [title], 'style_name_standard', undefined, undefined, undefined, undefined, node, maps)
+        titleMap = new mapObject({
+          local_id: id,
+          node_id: nodeId,
+          mapIndex: maps.length,
+          mapTextIndex: 0,
+          text: title,
+          mapText: [title],
+          maps: maps,
+          type: 'style_name_standard',
+          property: title,
+          node: node,
+          isPointer: isComponent
+        })
         maps.push(titleMap)
       }
       
@@ -1019,12 +1342,43 @@ window.czosnek = (function(){
         item = mapText[i];
         if(item.match(__matchInsert))
         {
-          localMap = new mapObject(id, nodeId, item, mapText, 'style_insert', title, title, node.style, title, node, maps)
+          localMap = new mapObject({
+            local_id: id,
+            node_id: nodeId,
+            mapIndex: maps.length,
+            mapTextIndex: i,
+            text: item,
+            mapText: mapText,
+            maps: maps,
+            node: node,
+            type: 'style_insert',
+            property: title,
+            local: node.style,
+            localAttr: title,
+            isInlineStyle: true,
+            isPointer: isComponent
+          })
           maps.push(localMap)
         }
         else if(item.match(__matchText))
         {
-          localMap = new mapObject(id, nodeId, item, mapText, 'style_standard', title, title, node.style, title, node, maps)
+          localMap = new mapObject({
+            local_id: id,
+            node_id: nodeId,
+            mapIndex: maps.length,
+            mapTextIndex: i,
+            text: item,
+            mapText: mapText,
+            maps: maps,
+            node: node,
+            type: 'style_standard',
+            property: title,
+            listener: title,
+            local: node.style,
+            localAttr: title,
+            isInlineStyle: true,
+            isPointer: isComponent
+          })
           maps.push(localMap)
         }
         else
