@@ -498,8 +498,8 @@ window.czosnek = (function(){
   
   function destruct(map)
   {
-    map.maps.splice(map.mapIndex, 1);
-    map.mapText.splice(map.mapIndex, 1);
+    map.maps[map.mapIndex] = null;
+    map.mapText[map.mapTextIndex] = '';
     Object.defineProperties(map, {
       node: setDescriptor(null, true, true, false),
       value: setDescriptor(null, true, true, false),
@@ -508,7 +508,8 @@ window.czosnek = (function(){
       maps: setDescriptor(null, true, true, false),
       nodeMaps: setDescriptor(null, true, true, false),
       mapText: setDescriptor(null, true, true, false),
-      bindListener: setDescriptor(null, true, true, false),
+      datalistener: setDescriptor(null, true, true, false),
+      domlistener: setDescriptor(null, true, true, false),
       data: setDescriptor(null, true, true, false)
     })
   }
