@@ -489,8 +489,27 @@ window.czosnek = (function(){
     wrapper.innerHTML = (__templates[title] || '<div class="missing_component">Unknown Component</div>');
 
     if(wrapper.children.length !== 1) return console.error('ERR: Component must be wrapped in a single element,', wrapper.children.length, 'nodes in', title, new Error().stack);
-
+    
+    wrapper.children[0].setAttribute('root', '');
+    
     return wrapper.children[0];
+  }
+  
+  function destruct(map)
+  {
+    map.maps.splice(map.mapIndex, 1);
+    map.mapText.splice(map.mapIndex, 1);
+    Object.defineProperties(map, {
+      node: setDescriptor(null, true, true, false),
+      value: setDescriptor(null, true, true, false),
+      values: setDescriptor([], true, true, false),
+      local: setDescriptor(null, true, true, false),
+      maps: setDescriptor(null, true, true, false),
+      nodeMaps: setDescriptor(null, true, true, false),
+      mapText: setDescriptor(null, true, true, false),
+      bindListener: setDescriptor(null, true, true, false),
+      data: setDescriptor(null, true, true, false)
+    })
   }
   
   /* ENDREGION */
@@ -1422,7 +1441,8 @@ window.czosnek = (function(){
     getUnknown:setDescriptor(getUnknown, false, true),
     isUnknown:setDescriptor(isUnknown, false, true),
     expand:setDescriptor(expand, false, true),
-    map:setDescriptor(map, false, true)
+    map:setDescriptor(map, false, true),
+    destruct:setDescriptor(destruct, false, true)
   });
   /* ENDREGION */
   
