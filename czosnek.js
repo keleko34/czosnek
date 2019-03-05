@@ -523,12 +523,12 @@ window.czosnek = (function(){
     })
   }
   
-  function copy(map, maps)
+  function copyMapToMaps(map, maps)
   {
     var copy = new mapObject(map);
     copy.maps = maps;
-    
-    return copy;
+    copy.mapIndex = maps.length;
+    maps.push(copy)
   }
   
   /* ENDREGION */
@@ -647,7 +647,7 @@ window.czosnek = (function(){
       
       for(x;x<len;x++)
       {
-        maps.push(copy(localmaps[x], maps));
+        copyMapToMaps(localmaps[x], maps);
       }
     }
     else
