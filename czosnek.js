@@ -100,7 +100,7 @@ window.czosnek = (function(){
   function mapObject(obj)
   {
     /* The key of the bind */
-    this.key = (obj.isFor ? getForKey(obj.text) : getKey(obj.text));
+    this.key = (obj.key || (obj.isFor ? getForKey(obj.text) : getKey(obj.text)));
     
     /* SEE map types comment */
     this.type = (this.key === 'innerHTML' ? 'insert' : obj.type);
@@ -112,13 +112,13 @@ window.czosnek = (function(){
     this.mapText = obj.mapText;
     
     /* The length of the key in case it is a deep proeprty key eg. prop.innerprop.mostinnerprop */
-    this.keyLength = this.key.split('.').length;
+    this.keyLength = (obj.keyLength || this.key.split('.').length);
     
     /* The last key in the key string in case its a deep property key */
-    this.localKey = this.key.split('.').pop();
+    this.localKey = (obj.localKey || this.key.split('.').pop());
     
     /* Filters attache to the bind */
-    this.filters = parseFilterTypes(getfilters(this.text));
+    this.filters = (obj.filters || parseFilterTypes(getfilters(this.text)));
     
     /* The unique id for the for loop */
     this.forId = obj.for_id;
@@ -127,7 +127,7 @@ window.czosnek = (function(){
     this.isPointer = obj.isPointer;
     
     /* Tells if the bind had extra content with it, this effects whether a two-way bind is allowed */
-    this.isDirty = (this.mapText.length !== 1 || this.key === 'innerHTML');
+    this.isDirty = (obj.isDirty !== undefined ? obj.isDirty : (this.mapText.length !== 1 || this.key === 'innerHTML'));
     
     /* The dom listener to listen for changes */
     this.listener = obj.listener;
@@ -169,25 +169,25 @@ window.czosnek = (function(){
     this.isInlineStyle = obj.isInlineStyle;
     
     /* if this bind is an event bind */
-    this.isEvent = (obj.isEvent || (!!this.isAttr && __EventList__.indexOf(this.localAttr) !== -1));
+    this.isEvent = (obj.isEvent !== undefined ? obj.isEvent : (!!this.isAttr && __EventList__.indexOf(this.localAttr) !== -1));
     
     /* if this bind is a value bind on an input */
-    this.isInput = (this.node.tagName === 'INPUT');
+    this.isInput = (obj.isInput !== undefined ? obj.isInput : (this.node.tagName === 'INPUT'));
     
     /* if this bind is a value bind on a radio element */
-    this.isRadio = (!!this.isInput && ['radio','checkbox'].indexOf(this.node.type) !== -1);
+    this.isRadio = (obj.isRadio !== undefined ? obj.isRadio : (!!this.isInput && ['radio','checkbox'].indexOf(this.node.type) !== -1));
     
     /* IN case its a for bind, this is the component name with it */
-    this.forComponent = (this.isFor ? getForComponent(this.text) : undefined);
+    this.forComponent = (obj.forComponent || (this.isFor ? getForComponent(this.text) : undefined));
     
     /* Extra property to hold values assocated with a style or attr name bind eg {{attr}}="This is values" similiar to mapObject but gets passed to the {{attr}} bind in the event it is a function */
-    this.values = [];
+    this.values = (obj.values || []);
     
     if(!this.isStyle)
     {
       Object.defineProperties(this, {
-        localId: setDescriptorAttribute('component-id', obj.local_id, this.node),
-        nodeId: setDescriptorAttribute('node-id', (obj.local_id + '-' + obj.node_id), this.node)
+        localId: setDescriptorAttribute('component-id', (obj.localId || obj.local_id), this.node),
+        nodeId: setDescriptorAttribute('node-id', (obj.nodeId || (obj.local_id + '-' + obj.node_id)), this.node)
       });
     }
   }
@@ -523,6 +523,14 @@ window.czosnek = (function(){
     })
   }
   
+  function copy(map, maps)
+  {
+    var copy = new mapObject(map);
+    copy.maps = maps;
+    
+    return copy;
+  }
+  
   /* ENDREGION */
   
   /* BIND HELPERS */
@@ -639,7 +647,7 @@ window.czosnek = (function(){
       
       for(x;x<len;x++)
       {
-        maps.push(localmaps[x]);
+        maps.push(copy(localmaps[x], maps));
       }
     }
     else
