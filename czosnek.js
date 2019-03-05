@@ -498,7 +498,16 @@ window.czosnek = (function(){
   
   function destruct(map)
   {
-    map.maps[map.mapIndex] = null;
+    if(!map.maps) return console.error(new Error('You can not destruct a map that has already be destructed'));
+    map.maps.splice(map.mapIndex, 1);
+    
+    var len = map.maps.length,
+        x = 0;
+    for(x;x<len;x++)
+    {
+      map.maps[x].mapIndex = x;
+    }
+    
     map.mapText[map.mapTextIndex] = '';
     Object.defineProperties(map, {
       node: setDescriptor(null, true, true, false),

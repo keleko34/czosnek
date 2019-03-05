@@ -82,7 +82,7 @@ function standardBinds(describe, it, expect)
       for(var x =0,len=methods.length;x<len;x++)
       {
         /* SETUP */
-        czosnek.unregister(component)
+        czosnek.unregister(component);
         if(!czosnek.isRegistered(component)) czosnek.register(component, template, templateStyle);
         methods[x](component, length, filters, objects);
       }
@@ -97,6 +97,10 @@ function standardBinds(describe, it, expect)
       
       expect(maps.length).to.equal(len);
       
+      while(maps[0])
+      {
+         czosnek.destruct(maps[0]);
+      }
       done();
     });
   }
@@ -116,6 +120,11 @@ function standardBinds(describe, it, expect)
           expect(maps[x].filters[f[i]].length).to.equal(filters[x][f[i]].length);
         }
       }
+      
+      while(maps[0])
+      {
+         czosnek.destruct(maps[0]);
+      }
       done();
     });
   }
@@ -124,9 +133,11 @@ function standardBinds(describe, it, expect)
   {
     it("Should contain the proper items in the map objects", function(done){
       var test = new czosnek(component),
-          maps = test.maps;
+          maps = test.maps,
+          len = objects.length,
+          x = 0;
       
-      for(var x=0,len=objects.length;x<len;x++)
+      for(x;x<len;x++)
       {
         var filter = maps[x],
             keys = Object.keys(objects[x]),
@@ -147,6 +158,11 @@ function standardBinds(describe, it, expect)
           }
         }
       }
+      
+      while(maps[0])
+      {
+         czosnek.destruct(maps[0]);
+      }
       done();
     });
   }
@@ -154,11 +170,17 @@ function standardBinds(describe, it, expect)
   function checkStyles(component)
   {
     it("Should swap the local css styles with the proper component id", function(done){
-      var test = new czosnek(component);
-      var id = test.id;
+      var test = new czosnek(component),
+          id = test.id,
+          maps = test.maps;
       
       var styleNode = document.head.querySelector('[component-id="'+id+'"]');
       expect(styleNode.textContent.indexOf('[component-id="'+id+'"]')).to.not.equal(-1);
+      
+      while(maps[0])
+      {
+         czosnek.destruct(maps[0]);
+      }
       done();
     });
   }
