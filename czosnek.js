@@ -491,6 +491,7 @@ window.czosnek = (function(){
     if(wrapper.children.length !== 1) return console.error('ERR: Component must be wrapped in a single element,', wrapper.children.length, 'nodes in', title, new Error().stack);
     
     wrapper.children[0].setAttribute('root', '');
+    wrapper.children[0].title = title;
     
     return wrapper.children[0];
   }
