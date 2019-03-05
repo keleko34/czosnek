@@ -22,9 +22,11 @@ function timer(key,index)
   }
 }
 
-function getElementsByText(str, tag = 'a') 
+function getElementsByText(str, tag)
 {
-  return Array.prototype.slice.call(document.getElementsByTagName(tag)).filter(el => el.textContent.trim() === str.trim())[0];
+  if(!tag) tag = 'a';
+  return Array.prototype.slice.call(document.getElementsByTagName(tag))
+  .filter(function(el){ return (el.textContent.trim() === str.trim())})[0];
 }
 
 function getDurationsInTest(key)

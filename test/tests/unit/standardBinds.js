@@ -1,72 +1,22 @@
 function standardBinds(describe, it, expect)
 {
-  var templateStandard = `<div>
-    <div class="{{testobj.testarr.0 | [+val], [-val], [~val]}}">{{test | toUpperCase}}</div>
-  </div>`,
-      templateStandardStyle = `
-        .yay {
-          background: gray
-        }
-
-        .yay {{local}} {
-          color: yellow
-        }
-
-        {{>local}} {
-          width: 100px
-        }
-      `,
-      templateInsert = `<div>
-    <div class="{{>testobj.testarr.0 | [+val], [-val], [~val]}}">{{>test | toUpperCase}}</div>
-  </div>`,
-      templateInsertStyle = `
-        .something {{local}} {
-            yay: 500px
-        }
-      `,
-      templateFor = `<div>
-    <div>{{for items loop listitem | sort}}</div>
-  </div>`,
-      templateForStyle = `
-      {{local}} {
-            background: blue
-        }
-      `,
-      templatePointer = `<div>
-    <test class="{{testobj.testarr.0 | [+val]}} test-class">
-        <div>{{test | toUpperCase}} something</div>
-    </test>
-  </div>`,
-      templatePointerStyle = `
-        {{local}} {
-            yay: 500px
-        }
-      `,
-      templateNode = `<div>
-    <{{test | helper}} class="{{cool}}">
-        <div>{{help}}</div>
-    </{{test | helper}}>
-  </div>`,
-      templateNodeStyle = `
-        {{local}} {
-            yay: 500px
-        }
-      `,
-      templateEvent = `
-        <div onclick="{{click}}"></div>
-      `,
+  var templateStandard = '<div><div class="{{testobj.testarr.0 | [+val], [-val], [~val]}}">{{test | toUpperCase}}</div></div>',
+      templateStandardStyle = '.yay { background: gray } .yay {{local}} { color: yellow } {{>local}} { width: 100px }',
+      templateInsert = '<div><div class="{{>testobj.testarr.0 | [+val], [-val], [~val]}}">{{>test | toUpperCase}}</div></div>',
+      templateInsertStyle = '.something {{local}} { yay: 500px }',
+      templateFor = '<div><div>{{for items loop listitem | sort}}</div></div>',
+      templateForStyle = '{{local}} { background: blue }',
+      templatePointer = '<div><test class="{{testobj.testarr.0 | [+val]}} test-class"><div>{{test | toUpperCase}} something</div></test></div>',
+      templatePointerStyle = '{{local}} { yay: 500px }',
+      templateNode = '<div><{{test | helper}} class="{{cool}}"><div>{{help}}</div></{{test | helper}}></div>',
+      templateNodeStyle = '{{local}} { yay: 500px }',
+      templateEvent = '<div onclick="{{click}}"></div>',
       templateEventStyle = '{{local}} { color:blue; }',
-      templateStyle = `<div></div>`,
-      templateStyleStyle = `
-        {{local}} { {{setColor}}:blue; }
-      `,
-      templateStyleAttr = `
-        <div style="color:{{color}};{{extra}}:blue;"></div>
-      `,
+      templateStyle = '<div></div>',
+      templateStyleStyle = '{{local}} { {{setColor}}:blue; }',
+      templateStyleAttr = '<div style="color:{{color}};{{extra}}:blue;"></div>',
       templateStyleAttrStyle = '{{local}} { color:blue; }',
-      templateAttr = `
-        <div {{attr1}}="something" attr="{{test}} data" {{attr2}}="test" ></div>
-      `,
+      templateAttr = '<div {{attr1}}="something" attr="{{test}} data" {{attr2}}="test" ></div>',
       templateAttrStyle = '{{local}} { color:blue; }';
   
   var methods = [
@@ -367,21 +317,13 @@ function standardBinds(describe, it, expect)
     ],
     [
       {
-        isDirty: true,
-        type: 'standard',
-        listener: 'attr',
-        localAttr: 'value',
-        key: 'test'
+        
       },
       {
-        isDirty: false,
-        type: 'attr_name_standard',
-        key: 'attr1'
+        
       },
       {
-        isDirty: false,
-        type: 'attr_name_standard',
-        key: 'attr2'
+        
       }
     ]);
   });

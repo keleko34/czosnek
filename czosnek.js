@@ -576,8 +576,17 @@ window.czosnek = (function(){
   
   function uuid()
   {
-    var rnds = new Uint8Array(8).map(function(){return Math.floor((Math.random() * 99) + 1)}),
+    var rnds = new Uint8Array(8),
+        len = rnds.length,
+        x = 0,
         i = 0;
+    
+    /* IE11 does not support map function on Byte Arrays */
+    for(x;x<len;x++)
+    {
+      rnds[x] = Math.floor((Math.random() * 99) + 1);
+    }
+    
     rnds[6] = (rnds[6] & 0x0f) | 0x40;
     rnds[8] = (rnds[8] & 0x0f) | 0x80;
     
