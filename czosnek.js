@@ -1242,12 +1242,13 @@ window.czosnek = (function(){
           mapIndex: maps.length,
           mapTextIndex: 0,
           text: title,
-          mapText: [title],
           maps: maps,
+          mapText: [title],
           type: 'attr_name_insert',
           property: title,
           node: node
         })
+        titleMap.mapText = [titleMap];
         maps.push(titleMap)
       }
       else if(title.match(__matchText))
@@ -1258,13 +1259,14 @@ window.czosnek = (function(){
           mapIndex: maps.length,
           mapTextIndex: 0,
           text: title,
-          mapText: [title],
           maps: maps,
+          mapText: [title],
           type: 'attr_name_standard',
           property: title,
           node: node,
           isPointer: isComponent
         })
+        titleMap.mapText = [titleMap];
         maps.push(titleMap);
       }
       
@@ -1326,7 +1328,7 @@ window.czosnek = (function(){
   /* map style takes all styles and maps to the property */
   function mapStyleAttr(node, text, maps, id, nodeId, isComponent)
   {
-    var styles = text.match(__matchStyles),
+    var styles = (text.match(__matchStyles) || [text]),
         mapText,
         style,
         title,
@@ -1339,102 +1341,150 @@ window.czosnek = (function(){
         lenn,
         i = 0;
     
-    for(x;x<len;x++)
+    if(styles.length === 1)
     {
-      style = styles[x].split(':');
-      title = style[0];
-      value = style[1];
-      
-      if(title.match(__matchInsert))
+      item = styles[0];
+      if(item.match(__matchInsert))
       {
-        titleMap = new mapObject({
-          local_id: id,
-          node_id: nodeId,
-          mapIndex: maps.length,
-          mapTextIndex: 0,
-          text: title,
-          mapText: [title],
-          maps: maps,
-          type: 'style_name_insert',
-          property: title,
-          node: node,
-          isPointer: isComponent
-        })
-        maps.push(titleMap)
-      }
-      else if(title.match(__matchText))
-      {
-        titleMap = new mapObject({
-          local_id: id,
-          node_id: nodeId,
-          mapIndex: maps.length,
-          mapTextIndex: 0,
-          text: title,
-          mapText: [title],
-          maps: maps,
-          type: 'style_name_standard',
-          property: title,
-          node: node,
-          isPointer: isComponent
-        })
-        maps.push(titleMap)
-      }
-      
-      mapText = splitText(value);
-      lenn = mapText.length;
-      i = 0;
-      
-      for(i;i<lenn;i++)
-      {
-        item = mapText[i];
-        if(item.match(__matchInsert))
-        {
-          localMap = new mapObject({
+        localMap = new mapObject({
             local_id: id,
             node_id: nodeId,
             mapIndex: maps.length,
-            mapTextIndex: i,
+            mapTextIndex: 0,
             text: item,
-            mapText: mapText,
             maps: maps,
+            mapText: [item],
+            type: 'style',
+            property: 'style',
             node: node,
-            type: 'style_insert',
-            property: title,
-            local: node.style,
-            localAttr: title,
-            isInlineStyle: true,
             isPointer: isComponent
           })
+          localMap.mapText = [localMap];
           maps.push(localMap)
-        }
-        else if(item.match(__matchText))
-        {
-          localMap = new mapObject({
+      }
+      else if(item.match(__matchText))
+      {
+        localMap = new mapObject({
             local_id: id,
             node_id: nodeId,
             mapIndex: maps.length,
-            mapTextIndex: i,
+            mapTextIndex: 0,
             text: item,
-            mapText: mapText,
             maps: maps,
+            mapText: [item],
+            type: 'style',
+            property: 'style',
+            listener: 'style',
+            local: node,
+            localAttr: 'style',
             node: node,
-            type: 'style_standard',
-            property: title,
-            listener: title,
-            local: node.style,
-            localAttr: title,
-            isInlineStyle: true,
             isPointer: isComponent
           })
+          localMap.mapText = [localMap];
           maps.push(localMap)
-        }
-        else
-        {
-          localMap = item;
-        }
-        mapText[i] = localMap;
       }
-      if(titleMap) titleMap.values = mapText;
+    }
+    else
+    {
+      for(x;x<len;x++)
+      {
+        style = styles[x].split(':');
+        title = style[0];
+        value = style[1];
+
+        if(title.match(__matchInsert))
+        {
+          titleMap = new mapObject({
+            local_id: id,
+            node_id: nodeId,
+            mapIndex: maps.length,
+            mapTextIndex: 0,
+            text: title,
+            maps: maps,
+            mapText: [title],
+            type: 'style_name_insert',
+            property: title,
+            node: node,
+            isPointer: isComponent
+          })
+          titleMap.mapText = [titleMap];
+          maps.push(titleMap)
+        }
+        else if(title.match(__matchText))
+        {
+          titleMap = new mapObject({
+            local_id: id,
+            node_id: nodeId,
+            mapIndex: maps.length,
+            mapTextIndex: 0,
+            text: title,
+            maps: maps,
+            mapText: [title],
+            type: 'style_name_standard',
+            property: title,
+            node: node,
+            isPointer: isComponent
+          })
+          titleMap.mapText = [titleMap];
+          maps.push(titleMap)
+        }
+
+        mapText = splitText(value);
+        lenn = mapText.length;
+        i = 0;
+
+        for(i;i<lenn;i++)
+        {
+          item = mapText[i];
+          if(item.match(__matchInsert))
+          {
+            localMap = new mapObject({
+              local_id: id,
+              node_id: nodeId,
+              mapIndex: maps.length,
+              mapTextIndex: i,
+              text: item,
+              mapText: mapText,
+              maps: maps,
+              node: node,
+              type: 'style_insert',
+              property: title,
+              local: node.style,
+              localAttr: title,
+              isInlineStyle: true,
+              isPointer: isComponent
+            })
+            maps.push(localMap)
+          }
+          else if(item.match(__matchText))
+          {
+            localMap = new mapObject({
+              local_id: id,
+              node_id: nodeId,
+              mapIndex: maps.length,
+              mapTextIndex: i,
+              text: item,
+              mapText: mapText,
+              maps: maps,
+              node: node,
+              type: 'style_standard',
+              property: title,
+              listener: title,
+              local: node.style,
+              localAttr: title,
+              isInlineStyle: true,
+              isPointer: isComponent
+            })
+            maps.push(localMap)
+          }
+          else
+          {
+            localMap = item;
+          }
+          mapText[i] = localMap;
+        }
+        if(titleMap) titleMap.values = mapText;
+      }
     }
   }
   

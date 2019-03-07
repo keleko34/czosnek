@@ -16,6 +16,8 @@ function standardBinds(describe, it, expect)
       templateStyleStyle = '{{local}} { {{setColor}}:blue; }',
       templateStyleAttr = '<div style="color:{{color}};{{extra}}:blue;"></div>',
       templateStyleAttrStyle = '{{local}} { color:blue; }',
+      templateSingleStyle = '<div style="{{styles}}"></div>',
+      templateSingleStyleStyle = '{{local}} { color:blue; }',
       templateAttr = '<div {{attr1}}="something" attr="{{test}} data" {{attr2}}="test" ></div>',
       templateAttrStyle = '{{local}} { color:blue; }';
   
@@ -309,6 +311,19 @@ function standardBinds(describe, it, expect)
       {
         isDirty: false,
         type: 'style_name_standard'
+      }
+    ]);
+    runCategory('singleStyle', templateSingleStyle, templateSingleStyleStyle, 1,
+    [
+      {}, {}
+    ],
+    [
+      {
+        isDirty: false,
+        listener: 'style',
+        property: 'style',
+        localAttr: 'style',
+        type: 'style'
       }
     ]);
     runCategory('attr', templateAttr, templateAttrStyle, 3,
