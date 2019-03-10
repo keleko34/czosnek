@@ -78,7 +78,8 @@ window.czosnek = (function(){
       __replaceNodeNameFinish = /(<\/({{(.*?)}})>)/g,
       __matchStyles= /([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)(?=;)/g,
       __matchLocal = /({{>?local}})/g,
-      __matchLocalStyle = /(([^}][\s\w\.]+?)?{{>?local}}[\r\n\s\S]*?{(([\r\n\s\W\w]+?)|(.*?))(?:[^}])}(?=[\n\.\r\s]|$))/g;
+      __matchLocalStyle = /(([^}][\s\w\.]+?)?{{>?local}}[\r\n\s\S]*?{(([\r\n\s\W\w]+?)|(.*?))(?:[^}])}(?=[\n\.\r\s]|$))/g,
+      __replaceStyleValue = /(:(\s+)?(.*?);)/g
   
   /* ENDREGION */
   
@@ -1085,7 +1086,7 @@ window.czosnek = (function(){
           node: node,
           isStyle: true
         });
-            
+        
         maps.push(localmap);
         mapText[x] = localmap;
 
@@ -1105,7 +1106,8 @@ window.czosnek = (function(){
         var isEnd = (item.indexOf(';') !== -1);
         if(item[0] !== ';')
         {
-          titleMap.values.push(item.substring(0, (isEnd ? item.indexOf(';') : item.length)).replace(':', '').replace(';',''));
+          /* TODO: change to regex to remove beginning strings */
+          titleMap.values.push(item.match(__replaceStyleValue)[0].replace(__replaceStyleValue, '$3'));
         }
         titleMap = (isEnd ? undefined : titleMap);
       }
