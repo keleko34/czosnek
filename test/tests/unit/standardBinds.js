@@ -306,11 +306,11 @@ function standardBinds(describe, it, expect)
         listener: 'color',
         property: 'color',
         localAttr: 'color',
-        type: 'style_standard'
+        type: 'style'
       },
       {
         isDirty: false,
-        type: 'style_name_standard'
+        type: 'style'
       }
     ]);
     runCategory('singleStyle', templateSingleStyle, templateSingleStyleStyle, 1,
