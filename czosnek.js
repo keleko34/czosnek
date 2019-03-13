@@ -217,7 +217,7 @@ window.czosnek = (function(){
   function setDescriptorLocalMaps(parent)
   {
     var __arr = [],
-        __parentExt = (parent && parent.__czosnekExtensions__);
+        __parentExt = (parent && parent.__CzosnekExtensions__);
     
     function get(){ return __arr; }
     
@@ -238,7 +238,7 @@ window.czosnek = (function(){
   function setDescriptorSubNodes(parent)
   {
     var __arr = [],
-        __parentExt = (parent && parent.__czosnekExtensions__);
+        __parentExt = (parent && parent.__CzosnekExtensions__);
     
     function get(){ return __arr; }
     
@@ -660,7 +660,7 @@ window.czosnek = (function(){
   {
     id = (id || uuid());
     
-    Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
+    Object.defineProperty(node, '__CzosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
     
     switch(node.nodeType)
     {
@@ -705,9 +705,9 @@ window.czosnek = (function(){
   function createGlobalStyleMaps(node, maps, id)
   {
     id = (id || uuid());
-    if(!node.__czosnekExtensions__) Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
+    if(!node.__CzosnekExtensions__) Object.defineProperty(node, '__CzosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
     
-    var localmaps = node.__czosnekExtensions__.localmaps;
+    var localmaps = node.__CzosnekExtensions__.localmaps;
     
     if(localmaps && localmaps.length)
     {
@@ -729,7 +729,7 @@ window.czosnek = (function(){
   function createLocalStyleMaps(node, maps, id)
   {
     id = (id || uuid());
-    if(!node.__czosnekExtensions__) Object.defineProperty(node, '__czosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
+    if(!node.__CzosnekExtensions__) Object.defineProperty(node, '__CzosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
     mapStyleNode(node, maps, id, uuid());
     return maps;
   }
@@ -751,7 +751,7 @@ window.czosnek = (function(){
     if(!node.textContent.match(__matchText)) return;
 
     var text = node.textContent,
-        extensions = node.__czosnekExtensions__,
+        extensions = node.__CzosnekExtensions__,
         mapText = splitText(text),
         localmap,
         item,
@@ -844,7 +844,7 @@ window.czosnek = (function(){
   function mapElementNode(node, parent, maps, id)
   {
     var attrs = __slice.call(node.attributes),
-        extensions = node.__czosnekExtensions__,
+        extensions = node.__CzosnekExtensions__,
         nodeId = uuid(),
         localmap,
         item,
@@ -988,7 +988,7 @@ window.czosnek = (function(){
   function mapComponentNode(node, parent, maps, id)
   {
     var attrs = __slice.call(node.attributes),
-        extensions = node.__czosnekExtensions__,
+        extensions = node.__CzosnekExtensions__,
         nodeId = uuid(),
         localmap,
         item,
@@ -1078,7 +1078,7 @@ window.czosnek = (function(){
     if(!node.textContent.match(__matchText)) return;
     
     var text = node.textContent,
-        extensions = node.__czosnekExtensions__,
+        extensions = node.__CzosnekExtensions__,
         isFullStyle = false,
         isFullProp = false,
         prevIsString,
@@ -1665,6 +1665,8 @@ window.czosnek = (function(){
     
     /* Maps of component */
     this.maps = map(this.component, this.style, this.id);
+    
+    Object.defineProperty(this.component, '__CzosnekRoot__', setDescriptor(this));
     
     __registered__.push(this);
   }
