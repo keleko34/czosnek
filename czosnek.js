@@ -1149,6 +1149,7 @@ window.czosnek = (function(){
         if(titleMap)
         {
           mapText.splice(x, 1);
+          len = mapText.length;
           titleMap.mapValues.push(localmap);
           titleMap.values.push(localmap);
         }
@@ -1200,6 +1201,7 @@ window.czosnek = (function(){
         if(titleMap)
         {
           mapText.splice(x, 1);
+          len = mapText.length;
           titleMap.mapValues.push(localmap);
           titleMap.values.push(localmap);
         }
@@ -1238,6 +1240,7 @@ window.czosnek = (function(){
             {
               titleMap.values.push(item);
             }
+            len = mapText.length;
             mapText.splice(x, 1);
           }
         }
