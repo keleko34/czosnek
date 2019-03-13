@@ -519,7 +519,7 @@ window.czosnek = (function(){
       map.maps[x].mapIndex = x;
     }
     
-    map.mapText[map.mapTextIndex] = '';
+    if(map.mapTextIndex !== -1) map.mapText[map.mapTextIndex] = '';
     
     if(map.mapValues.length)
     {
@@ -1130,9 +1130,9 @@ window.czosnek = (function(){
           local_id: id,
           node_id: nodeId,
           mapIndex: mapValues.length,
-          mapTextIndex: (titleMap ? titleMap.values.length : x),
+          mapTextIndex: (titleMap ? -1 : x),
           text: item,
-          mapText: (titleMap ? titleMap.values : mapText),
+          mapText: mapText,
           maps: mapValues,
           type: 'insert',
           property: 'innerHTML',
@@ -1184,9 +1184,9 @@ window.czosnek = (function(){
           local_id: id,
           node_id: nodeId,
           mapIndex: mapValues.length,
-          mapTextIndex: (titleMap ? titleMap.values.length : x),
+          mapTextIndex: (titleMap ? -1 : x),
           text: item,
-          mapText: (titleMap ? titleMap.values : mapText),
+          mapText: mapText,
           maps: mapValues,
           type: 'stylesheet',
           property: 'innerHTML',
