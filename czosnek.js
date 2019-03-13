@@ -1102,7 +1102,6 @@ window.czosnek = (function(){
     for(x;x<len;x++)
     {
       item = mapText[x];
-      outputText[x] = item;
       prevIsString = (typeof mapText[x - 1] === 'string' && mapText[x - 1]);
       nextIsString = (typeof mapText[x + 1] === 'string' && mapText[x + 1]);
       isFullStyle = false;
@@ -1158,11 +1157,13 @@ window.czosnek = (function(){
           maps.push(localmap);
           mapText[x] = localmap;
           titleMap = mapText[x];
+          outputText[x] = item;
         }
         else
         {
           maps.push(localmap);
           mapText[x] = localmap;
+          outputText[x] = item;
         }
       }
       /* MATCH TEXT TYPE */
@@ -1213,6 +1214,7 @@ window.czosnek = (function(){
           titleMap = mapText[x];
           /* LOCAL MAPS */
           extensions.localmaps = localmap;
+          outputText[x] = item;
         }
         else
         {
@@ -1220,6 +1222,7 @@ window.czosnek = (function(){
           mapText[x] = localmap;
           /* LOCAL MAPS */
           extensions.localmaps = localmap;
+          outputText[x] = item;
         }
       }
       else if(titleMap)
@@ -1237,6 +1240,10 @@ window.czosnek = (function(){
           x -= 1;
         }
         titleMap = ((item.indexOf(';') !== -1) ? undefined : titleMap);
+      }
+      else
+      {
+        outputText[x] = item;
       }
     }
     
