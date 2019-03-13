@@ -1224,7 +1224,7 @@ window.czosnek = (function(){
       {
         if(item.match(__matchValues))
         {
-          mapText[x] = mapText[x].replace(item.match(__matchValues)[0]);
+          mapText[x] = mapText[x].replace(item.match(__matchValues)[0], '');
           titleMap.values.push(item.match(__matchValues)[0].replace(/[:;]/g, ''));
         }
         else
