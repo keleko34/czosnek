@@ -49,13 +49,14 @@ window.czosnek = (function(){
       __matchNodeBind = /(<\/?{{.*?}}.*?>)/g,
       __matchAttrNameBind = /({{(?:(?!{{).)*?}}=".*?")/g,
       __matchStyleAttr = /(style=".*?{{.*?}}.*?")/g,
-      __matchStyleClass = /((.[^;\r\n\t↵]*?)({{.[^}]*?}})(\s+)?)$/g,
+      __matchStyleClass = /((.[^;\r\n\t↵]*?)({([\s\r\n\t]+)?{{.[^}]*?}}([\s\r\n\t]+)?})(\s+)?)$/g,
       __matchPrevProperty = /(:(\s+)?)$/g,
       __matchNextProperty = /^((\s+)?;)/g,
+      __matchClosestBrace = /^((\s+)?})/g,
       __replaceTagName = /(<\/?(\w.*?)\s.*?>)/g,
       /* splits binds out of text */
-      __matchText = /(\{\{.*?\}\})/g,
-      __splitText = /(\{\{.*?\}\})/g,
+      __matchText = /(?!\{\{\{)(?!\}\}\})(\{\{.*?\}\})/g,
+      __splitText = /(?!\{\{\{)(?!\}\}\})(\{\{.*?\}\})/g,
       __replaceKey = /[\s\{\}\>]|(\|(.*))/g,
       __matchFilters = /(\{\{(.*?)\|(.*?)\}\})/g,
       __replacefilters = /(.*?)\||[\s\{\}]/g,
@@ -1115,7 +1116,8 @@ window.czosnek = (function(){
       {
         if(prevIsString && !prevIsString.match(__matchPrevProperty))
         {
-          prevMatch = (prevIsString + mapText[x]).match(__matchStyleClass);
+          nextMatch = (nextIsString && nextIsString.match(__matchClosestBrace))
+          prevMatch = (prevIsString + mapText[x] + (nextMatch ? nextMatch[0] : '')).match(__matchStyleClass);
           nextMatch = (nextIsString && nextIsString.match(__matchNextProperty));
           isFullStyle = (prevMatch && (prevMatch[0].indexOf(';') === -1) && !nextMatch);
           isFullProp = (!!nextMatch);
@@ -1163,7 +1165,8 @@ window.czosnek = (function(){
       {
         if(prevIsString && !prevIsString.match(__matchPrevProperty))
         {
-          prevMatch = (prevIsString + mapText[x]).match(__matchStyleClass);
+          nextMatch = (nextIsString && nextIsString.match(__matchClosestBrace))
+          prevMatch = (prevIsString + mapText[x] + (nextMatch ? nextMatch[0] : '')).match(__matchStyleClass);
           nextMatch = (nextIsString && nextIsString.match(__matchNextProperty));
           isFullStyle = (prevMatch && (prevMatch[0].indexOf(';') === -1) && !nextMatch);
           isFullProp = (!!nextMatch);

@@ -21,7 +21,7 @@ function standardBinds(describe, it, expect)
       templateAttr = '<div {{attr1}}="something" attr="{{test}} data" {{attr2}}="test" ></div>',
       templateAttrStyle = '{{local}} { color:blue; }',
       templateStyleClass = '<div></div>',
-      templateStyleClassStyle = '.something {{style}} \r\n .something{{local}} {{style}}',
+      templateStyleClassStyle = '.something {{{style}}} \r\n .something{{local}} { {{style}} }',
       templateStyleProp = '<div></div>',
       templateStylePropStyle = '.something { {{prop}}; } \r\n .something{{local}} { color: blue; {{local_prop | adjust}}; }';
   
