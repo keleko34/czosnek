@@ -49,7 +49,7 @@ window.czosnek = (function(){
       __matchNodeBind = /(<\/?{{.*?}}.*?>)/g,
       __matchAttrNameBind = /({{(?:(?!{{).)*?}}=".*?")/g,
       __matchStyleAttr = /(style=".*?{{.*?}}.*?")/g,
-      __matchStyleClass = /((.[^;\r\n\t↵]*?)({([\s\r\n\t]+)?{{.[^}]*?}}([\s\r\n\t]+)?})(\s+)?)$/g,
+      __matchStyleClass = /(({([\s\r\n\t]+)?{{.[^}]*?}}([\s\r\n\t]+)?})([\s\r\n\t]+)?)$/g,
       __matchPrevProperty = /(:(\s+)?)$/g,
       __matchNextProperty = /^((\s+)?;)/g,
       __matchClosestBrace = /^(([\s\r\n\t]+)?})/g,
