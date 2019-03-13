@@ -525,7 +525,7 @@ window.czosnek = (function(){
       x = 0;
       for(x;x<len;x++)
       {
-        destruct(map.mapValues[x])
+        destructMap(map.mapValues[x])
       }
     }
     
