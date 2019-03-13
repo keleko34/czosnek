@@ -52,7 +52,7 @@ window.czosnek = (function(){
       __matchStyleClass = /((.[^;\r\n\t↵]*?)({([\s\r\n\t]+)?{{.[^}]*?}}([\s\r\n\t]+)?})(\s+)?)$/g,
       __matchPrevProperty = /(:(\s+)?)$/g,
       __matchNextProperty = /^((\s+)?;)/g,
-      __matchClosestBrace = /^((\s+)?})/g,
+      __matchClosestBrace = /^(([\s\r\n\t]+)?})/g,
       __replaceTagName = /(<\/?(\w.*?)\s.*?>)/g,
       /* splits binds out of text */
       __matchText = /(?!\{\{\{)(?!\}\}\})(\{\{.*?\}\})/g,
