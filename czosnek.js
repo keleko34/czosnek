@@ -522,11 +522,9 @@ window.czosnek = (function(){
     
     if(map.mapValues.length)
     {
-      len = map.mapValues.length;
-      x = 0;
-      for(x;x<len;x++)
+      while(map.mapValues[0])
       {
-        destructMap(map.mapValues[x])
+        destructMap(map.mapValues[0]);
       }
     }
     
@@ -1132,9 +1130,9 @@ window.czosnek = (function(){
           local_id: id,
           node_id: nodeId,
           mapIndex: mapValues.length,
-          mapTextIndex: x,
+          mapTextIndex: (titleMap ? titleMap.values.length : x),
           text: item,
-          mapText: mapText,
+          mapText: (titleMap ? titleMap.values : mapText),
           maps: mapValues,
           type: 'insert',
           property: 'innerHTML',
@@ -1183,9 +1181,9 @@ window.czosnek = (function(){
           local_id: id,
           node_id: nodeId,
           mapIndex: mapValues.length,
-          mapTextIndex: x,
+          mapTextIndex: (titleMap ? titleMap.values.length : x),
           text: item,
-          mapText: mapText,
+          mapText: (titleMap ? titleMap.values : mapText),
           maps: mapValues,
           type: 'stylesheet',
           property: 'innerHTML',
