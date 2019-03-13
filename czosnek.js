@@ -1,4 +1,4 @@
-/* TODO: new style types are not destructuring properly. need debug */
+/* TODO: */
 
 /* Map types:
    insert: single insert value item
@@ -659,6 +659,9 @@ window.czosnek = (function(){
   
   function createMaps(node, parent, maps, id)
   {
+    /* skip comment nodes */
+    if(node.nodeType === 8) return maps;
+    
     id = (id || uuid());
     
     Object.defineProperty(node, '__CzosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
@@ -1145,6 +1148,7 @@ window.czosnek = (function(){
         
         if(titleMap)
         {
+          mapText.splice(x, 1);
           titleMap.mapValues.push(localmap);
           titleMap.values.push(localmap);
         }
@@ -1195,6 +1199,7 @@ window.czosnek = (function(){
         
         if(titleMap)
         {
+          mapText.splice(x, 1);
           titleMap.mapValues.push(localmap);
           titleMap.values.push(localmap);
         }
@@ -1233,6 +1238,7 @@ window.czosnek = (function(){
             {
               titleMap.values.push(item);
             }
+            mapText.splice(x, 1);
           }
         }
         titleMap = (isEnd ? undefined : titleMap);
