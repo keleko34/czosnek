@@ -53,6 +53,7 @@ window.czosnek = (function(){
       __matchPrevProperty = /(:(\s+)?)$/g,
       __matchNextProperty = /^((\s+)?;)/g,
       __matchClosestBrace = /^(([\s\r\n\t]+)?})/g,
+      __matchValues = /(^(\s+)?:(\s+)?(.*?);)|(^(\s+):([\s\w\W]+)?)|(^([\s\w\W]+)?;)/g,
       __replaceTagName = /(<\/?(\w.*?)\s.*?>)/g,
       /* splits binds out of text */
       __matchText = /(?!\{\{\{)(?!\}\}\})(\{\{.*?\}\})/g,
@@ -1221,28 +1222,18 @@ window.czosnek = (function(){
       }
       else if(titleMap)
       {
-        var isEnd = (item.indexOf(';') !== -1);
-        if(item[0] !== ';')
+        if(item.match(__matchValues))
         {
-          if(item.replace(__replaceColonAndString, ''))
-          {
-            if(isEnd && item.indexOf(':') !== -1)
-            {
-              titleMap.values.push(item.match(__replaceStyleValue)[0].replace(__replaceStyleValue, '$3'));
-            }
-            else if(isEnd)
-            {
-              titleMap.values.push(item.match(__replaceEndStyleValue)[0].replace(__replaceEndStyleValue, '$3'));
-            }
-            else
-            {
-              titleMap.values.push(item);
-            }
-            len = mapText.length;
-            mapText.splice(x, 1);
-          }
+          mapText[x] = mapText[x].replace(item.match(__matchValues)[0]);
+          titleMap.values.push(item.match(__matchValues)[0].replace(/[:;]/g, ''));
         }
-        titleMap = (isEnd ? undefined : titleMap);
+        else
+        {
+          titleMap.values.push(item);
+          mapText.splice(x, 1);
+          len = mapText.length;
+        }
+        titleMap = ((item.indexOf(';') !== -1) ? undefined : titleMap);
       }
     }
     
