@@ -1149,6 +1149,7 @@ window.czosnek = (function(){
         {
           mapText.splice(x, 1);
           len = mapText.length;
+          x -= 1;
           titleMap.mapValues.push(localmap);
           titleMap.values.push(localmap);
         }
@@ -1201,6 +1202,7 @@ window.czosnek = (function(){
         {
           mapText.splice(x, 1);
           len = mapText.length;
+          x -= 1;
           titleMap.mapValues.push(localmap);
           titleMap.values.push(localmap);
         }
@@ -1232,6 +1234,7 @@ window.czosnek = (function(){
           titleMap.values.push(item);
           mapText.splice(x, 1);
           len = mapText.length;
+          x -= 1;
         }
         titleMap = ((item.indexOf(';') !== -1) ? undefined : titleMap);
       }
