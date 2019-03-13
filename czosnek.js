@@ -1,4 +1,4 @@
-/* TODO: */
+/* TODO: new style types are not destructuring properly. need debug */
 
 /* Map types:
    insert: single insert value item
@@ -33,7 +33,9 @@ window.czosnek = (function(){
         'onDOMAttrModified','onDOMCharacterDataModified',
         'onDOMNodeInserted','onDOMNodeRemoved',
         'onDOMSubtreeModified'])
-        .map(function(v){ return (v.toLowerCase()); });
+        .map(function(v){ return (v.toLowerCase()); }),
+      
+      __registered__ = [];
       
   /* ENDREGION */
   
@@ -47,6 +49,9 @@ window.czosnek = (function(){
       __matchNodeBind = /(<\/?{{.*?}}.*?>)/g,
       __matchAttrNameBind = /({{(?:(?!{{).)*?}}=".*?")/g,
       __matchStyleAttr = /(style=".*?{{.*?}}.*?")/g,
+      __matchStyleClass = /((.[^;\r\n\t↵]*?)({{.[^}]*?}})(\s+)?)$/g,
+      __matchPrevProperty = /(:(\s+)?)$/g,
+      __matchNextProperty = /^((\s+)?;)/g,
       __replaceTagName = /(<\/?(\w.*?)\s.*?>)/g,
       /* splits binds out of text */
       __matchText = /(\{\{.*?\}\})/g,
@@ -68,7 +73,7 @@ window.czosnek = (function(){
       __replaceNodeNameFinish = /(<\/({{(.*?)}})>)/g,
       __matchStyles= /([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)(?=;)/g,
       __matchLocal = /({{>?local}})/g,
-      __matchLocalStyle = /(([^}][\s\w\.]+?)?{{>?local}}[\r\n\s\S]*?{(([\r\n\s\W\w]+?)|(.*?))(?:[^}])}(?=[\n\.\r\s]|$))/g,
+      __matchLocalStyle = /(([^};][\s\w\.]+?)?{{>?local}}(([\r\n\s\S]*?{(([\r\n\s\W\w]+?)|(.*?))(?:[^}])}(?=[\n\.\r\s]|$))|(((.[^;\r\n\t↵]*?)({{.[^}]*?}})(\s+)?)$)))/g,
       __replaceStyleValue = /(:(\s+)?(.*?);)/g,
       __replaceEndStyleValue = /((\s+)?(.*?);)/g,
       __replaceColonAndString = /(:\s+)/g
@@ -140,6 +145,9 @@ window.czosnek = (function(){
     /* All the maps associated with this component */
     this.maps = obj.maps;
     
+    /* All the maps associated with just the values */
+    this.mapValues = (obj.mapValues || []);
+    
     /* the bind for a dynamic nodeName bind */
     this.nodeMaps = obj.nodeMaps;
     
@@ -160,6 +168,12 @@ window.czosnek = (function(){
     
     /* if this bind is an inline style */
     this.isInlineStyle = obj.isInlineStyle;
+    
+    /* determines if an entire css class is a map */
+    this.isFullStyle = obj.isFullStyle;
+    
+    /* determines if an entire css property is a map */
+    this.isFullProp = obj.isFullProp;
     
     /* if this bind is an event bind */
     this.isEvent = (obj.isEvent !== undefined ? obj.isEvent : (!!this.isAttr && __EventList__.indexOf(this.localAttr) !== -1));
@@ -429,6 +443,7 @@ window.czosnek = (function(){
   {
     __templates[title] = undefined;
     __styles[title] = undefined;
+    removeAllComponents(title);
     return this;
   }
   
@@ -484,14 +499,15 @@ window.czosnek = (function(){
     if(wrapper.children.length !== 1) return console.error('ERR: Component must be wrapped in a single element,', wrapper.children.length, 'nodes in', title, new Error().stack);
     
     wrapper.children[0].setAttribute('root', '');
+    wrapper.children[0].setAttribute('component', title);
     wrapper.children[0].title = title;
     
     return wrapper.children[0];
   }
   
-  function destruct(map)
+  function destructMap(map)
   {
-    if(!map.maps) return console.error(new Error('You can not destruct a map that has already be destructed'));
+    if(!map.maps) return console.error(new Error('You can not destruct a map that has already been destructed'));
     map.maps.splice(map.mapIndex, 1);
     
     var len = map.maps.length,
@@ -502,6 +518,17 @@ window.czosnek = (function(){
     }
     
     map.mapText[map.mapTextIndex] = '';
+    
+    if(map.mapValues.length)
+    {
+      len = map.mapValues.length;
+      x = 0;
+      for(x;x<len;x++)
+      {
+        destruct(map.mapValues[x])
+      }
+    }
+    
     Object.defineProperties(map, {
       node: setDescriptor(null, true, true, false),
       value: setDescriptor(null, true, true, false),
@@ -512,8 +539,30 @@ window.czosnek = (function(){
       mapText: setDescriptor(null, true, true, false),
       datalistener: setDescriptor(null, true, true, false),
       domlistener: setDescriptor(null, true, true, false),
+      funclistener: setDescriptor(null, true, true, false),
       data: setDescriptor(null, true, true, false)
     })
+  }
+  
+  function destruct(component)
+  {
+    var mapComponent = (component || this);
+    if(!mapComponent.maps) return this;
+    
+    var components = document.body.querySelector('[component="'+mapComponent.title+'"]'),
+        len = (components || []).length;
+    
+    __registered__.splice(__registered__.indexOf(mapComponent), 1);
+    
+    while(mapComponent.maps[0])
+    {
+      destructMap(mapComponent.maps[0]);
+    }
+    if(!len)
+    {
+      removeComponentStyles(mapComponent.title);
+    }
+    return this;
   }
   
   function copyMapToMaps(map, maps)
@@ -528,6 +577,24 @@ window.czosnek = (function(){
   
   /* BIND HELPERS */
   /* REGION */
+  
+  function removeAllComponents(title)
+  {
+    var len = __registered__.length,
+        x = 0;
+    for(x;x<len;x++)
+    {
+      if(__registered__[x].title === title) __registered__[x].destruct();
+    }
+  }
+  
+  function removeComponentStyles(title)
+  {
+    var nodes = document.head.querySelectorAll('[component="'+title+'"]'),
+        len = nodes.length,
+        x = 0;
+    for(x;x<len;x++){ document.head.removeChild(nodes[x]); }
+  }
   
   function replaceNonConformingHTML(html)
   {
@@ -1012,8 +1079,15 @@ window.czosnek = (function(){
     
     var text = node.textContent,
         extensions = node.__czosnekExtensions__,
+        isFullStyle = false,
+        isFullProp = false,
+        prevIsString,
+        nextIsString,
+        prevMatch,
+        nextMatch,
         titleMap,
         mapText = splitText(text),
+        mapValues,
         outputText = [],
         localmap,
         item,
@@ -1021,11 +1095,15 @@ window.czosnek = (function(){
         len = mapText.length,
         nodeId = localid;
     
-    /* TODO: if this is a clean bind as a style value allow two-way binding */
+    /* TODO: allow binding class style and property style */
     for(x;x<len;x++)
     {
       item = mapText[x];
       outputText[x] = item;
+      prevIsString = (typeof mapText[x - 1] === 'string' && mapText[x - 1]);
+      nextIsString = (typeof mapText[x + 1] === 'string' && mapText[x + 1]);
+      isFullStyle = false;
+      isFullProp = false;
       /* MATCH LOCAL KEY */
       if(item.match(__matchLocal))
       {
@@ -1035,24 +1113,37 @@ window.czosnek = (function(){
       /* MATCH INSERT TYPE */
       else if(item.match(__matchInsert))
       {
+        if(prevIsString && !prevIsString.match(__matchPrevProperty))
+        {
+          prevMatch = (prevIsString + mapText[x]).match(__matchStyleClass);
+          nextMatch = (nextIsString && nextIsString.match(__matchNextProperty));
+          isFullStyle = (prevMatch && (prevMatch[0].indexOf(';') === -1) && !nextMatch);
+          isFullProp = (!!nextMatch);
+        }
+        
+        mapValues = (titleMap ? titleMap.mapValues : maps);
+        
         localmap = new mapObject({
           local_id: id,
           node_id: nodeId,
-          mapIndex: maps.length,
+          mapIndex: mapValues.length,
           mapTextIndex: x,
           text: item,
           mapText: mapText,
-          maps: maps,
+          maps: mapValues,
           type: 'insert',
           property: 'innerHTML',
           local: node,
           localAttr: 'textContent',
           node: node,
-          isStyle: true
+          isStyle: true,
+          isFullStyle: isFullStyle,
+          isFullProp: isFullProp
         });
         
         if(titleMap)
         {
+          titleMap.mapValues.push(localmap);
           titleMap.values.push(localmap);
         }
         else if(!titleMap && mapText[x + 1] && mapText[x + 1].indexOf(':') === 0)
@@ -1070,28 +1161,41 @@ window.czosnek = (function(){
       /* MATCH TEXT TYPE */
       else if(item.match(__matchText))
       {
+        if(prevIsString && !prevIsString.match(__matchPrevProperty))
+        {
+          prevMatch = (prevIsString + mapText[x]).match(__matchStyleClass);
+          nextMatch = (nextIsString && nextIsString.match(__matchNextProperty));
+          isFullStyle = (prevMatch && (prevMatch[0].indexOf(';') === -1) && !nextMatch);
+          isFullProp = (!!nextMatch);
+        }
+        
+        mapValues = (titleMap ? titleMap.mapValues : maps);
+        
         localmap = new mapObject({
           local_id: id,
           node_id: nodeId,
-          mapIndex: maps.length,
+          mapIndex: mapValues.length,
           mapTextIndex: x,
           text: item,
           mapText: mapText,
-          maps: maps,
+          maps: mapValues,
           type: 'stylesheet',
           property: 'innerHTML',
           listener: 'html',
           local: node,
           localAttr: 'textContent',
           node: node,
-          isStyle: true
+          isStyle: true,
+          isFullStyle: isFullStyle,
+          isFullProp: isFullProp
         });
         
         if(titleMap)
         {
+          titleMap.mapValues.push(localmap);
           titleMap.values.push(localmap);
         }
-        else if(!titleMap && mapText[x + 1] && mapText[x + 1].indexOf(':') === 0)
+        else if(!titleMap && nextIsString && mapText[x + 1].indexOf(':') === 0)
         {
           maps.push(localmap);
           mapText[x] = localmap;
@@ -1238,6 +1342,7 @@ window.czosnek = (function(){
   {
     var attrs = text.match(__matchStyles),
         mapText,
+        mapValues,
         attr,
         title,
         value,
@@ -1295,6 +1400,7 @@ window.czosnek = (function(){
       }
       
       mapText = splitText(value);
+      mapValues = (titleMap ? titleMap.mapValues : maps);
       lenn = mapText.length;
       i = 0;
       
@@ -1306,11 +1412,11 @@ window.czosnek = (function(){
           localMap = new mapObject({
             local_id: id,
             node_id: nodeId,
-            mapIndex: maps.length,
+            mapIndex: mapValues.length,
             mapTextIndex: i,
             text: item,
             mapText: mapText,
-            maps: maps,
+            maps: mapValues,
             type: 'insert',
             property: title,
             listener: title,
@@ -1318,17 +1424,18 @@ window.czosnek = (function(){
             isAttr: true,
             isPointer: isComponent
           });
+          titleMap.mapValues.push(localMap)
         }
         else if(item.match(__matchText))
         {
           localMap = new mapObject({
             local_id: id,
             node_id: nodeId,
-            mapIndex: maps.length,
+            mapIndex: mapValues.length,
             mapTextIndex: i,
             text: item,
             mapText: mapText,
-            maps: maps,
+            maps: mapValues,
             type: 'attr',
             property: title,
             listener: title,
@@ -1336,6 +1443,7 @@ window.czosnek = (function(){
             isAttr: true,
             isPointer: isComponent
           });
+          titleMap.mapValues.push(localMap)
         }
         else
         {
@@ -1352,6 +1460,7 @@ window.czosnek = (function(){
   {
     var styles = (text.match(__matchStyles) || [text]),
         mapText,
+        mapValues,
         style,
         title,
         value,
@@ -1460,6 +1569,7 @@ window.czosnek = (function(){
         }
 
         mapText = splitText(value);
+        mapValues = (titleMap ? titleMap.mapValues : maps);
         lenn = mapText.length;
         i = 0;
 
@@ -1471,11 +1581,11 @@ window.czosnek = (function(){
             localMap = new mapObject({
               local_id: id,
               node_id: nodeId,
-              mapIndex: maps.length,
+              mapIndex: mapValues.length,
               mapTextIndex: i,
               text: item,
               mapText: mapText,
-              maps: maps,
+              maps: mapValues,
               node: node,
               type: 'style',
               property: title,
@@ -1489,17 +1599,21 @@ window.czosnek = (function(){
               localMap.mapText = mapText;
               maps.push(localMap);
             }
+            else
+            {
+              titleMap.mapValues.push(localMap)
+            }
           }
           else if(item.match(__matchText))
           {
             localMap = new mapObject({
               local_id: id,
               node_id: nodeId,
-              mapIndex: maps.length,
+              mapIndex: mapValues.length,
               mapTextIndex: i,
               text: item,
               mapText: mapText,
-              maps: maps,
+              maps: mapValues,
               node: node,
               type: 'style',
               property: title,
@@ -1513,6 +1627,10 @@ window.czosnek = (function(){
             {
               localMap.mapText = mapText;
               maps.push(localMap);
+            }
+            else
+            {
+              titleMap.mapValues.push(localMap)
             }
           }
           else
@@ -1547,7 +1665,13 @@ window.czosnek = (function(){
     
     /* Maps of component */
     this.maps = map(this.component, this.style, this.id);
+    
+    __registered__.push(this);
   }
+  
+  Object.defineProperties(Czosnek.prototype,{
+    destruct:setDescriptor(destruct, false, true)
+  });
   
   Object.defineProperties(Czosnek,{
     register:setDescriptor(register, false, true),

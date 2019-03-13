@@ -19,7 +19,11 @@ function standardBinds(describe, it, expect)
       templateSingleStyle = '<div style="{{styles}}"></div>',
       templateSingleStyleStyle = '{{local}} { color:blue; }',
       templateAttr = '<div {{attr1}}="something" attr="{{test}} data" {{attr2}}="test" ></div>',
-      templateAttrStyle = '{{local}} { color:blue; }';
+      templateAttrStyle = '{{local}} { color:blue; }',
+      templateStyleClass = '<div></div>',
+      templateStyleClassStyle = '.something {{style}} \r\n .something{{local}} {{style}}',
+      templateStyleProp = '<div></div>',
+      templateStylePropStyle = '.something { {{prop}}; } \r\n .something{{local}} { color: blue; {{local_prop | adjust}}; }';
   
   var methods = [
     checkMaps,
@@ -35,7 +39,7 @@ function standardBinds(describe, it, expect)
       {
         /* SETUP */
         czosnek.unregister(component);
-        if(!czosnek.isRegistered(component)) czosnek.register(component, template, templateStyle);
+        czosnek.register(component, template, templateStyle);
         methods[x](component, length, filters, objects);
       }
     });
@@ -49,10 +53,7 @@ function standardBinds(describe, it, expect)
       
       expect(maps.length).to.equal(len);
       
-      while(maps[0])
-      {
-         czosnek.destruct(maps[0]);
-      }
+      test.destruct();
       done();
     });
   }
@@ -73,10 +74,7 @@ function standardBinds(describe, it, expect)
         }
       }
       
-      while(maps[0])
-      {
-         czosnek.destruct(maps[0]);
-      }
+      test.destruct();
       done();
     });
   }
@@ -111,10 +109,7 @@ function standardBinds(describe, it, expect)
         }
       }
       
-      while(maps[0])
-      {
-         czosnek.destruct(maps[0]);
-      }
+      test.destruct();
       done();
     });
   }
@@ -129,10 +124,7 @@ function standardBinds(describe, it, expect)
       var styleNode = document.head.querySelector('[component-id="'+id+'"]');
       expect(styleNode.textContent.indexOf('[component-id="'+id+'"]')).to.not.equal(-1);
       
-      while(maps[0])
-      {
-         czosnek.destruct(maps[0]);
-      }
+      test.destruct();
       done();
     });
   }
@@ -326,6 +318,7 @@ function standardBinds(describe, it, expect)
         type: 'style'
       }
     ]);
+    /* We have an issue testing this as browsers seem to put attributes in different orders */
     runCategory('attr', templateAttr, templateAttrStyle, 3,
     [
       {}, {}, {}
@@ -339,6 +332,44 @@ function standardBinds(describe, it, expect)
       },
       {
         
+      }
+    ]);
+    runCategory('styleClass', templateStyleClass, templateStyleClassStyle, 2,
+    [
+      {}, {}
+    ],
+    [
+      {
+        isDirty: true,
+        listener: 'html',
+        localAttr: 'textContent',
+        key: 'style',
+        isFullStyle: true
+      },
+      {
+        isDirty: true,
+        listener: 'html',
+        localAttr: 'textContent',
+        key: 'style',
+        isFullStyle: true
+      }
+    ]);
+    runCategory('styleProp', templateStyleProp, templateStylePropStyle, 2,
+    [{}, { filters: [1] }],
+    [
+      {
+        isDirty: true,
+        listener: 'html',
+        localAttr: 'textContent',
+        key: 'prop',
+        isFullProp: true
+      },
+      {
+        isDirty: true,
+        listener: 'html',
+        localAttr: 'textContent',
+        key: 'local_prop',
+        isFullProp: true
       }
     ]);
   });
