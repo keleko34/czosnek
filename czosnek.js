@@ -53,7 +53,7 @@ window.czosnek = (function(){
       __matchPrevProperty = /(:(\s+)?)$/g,
       __matchNextProperty = /^((\s+)?;)/g,
       __matchClosestBrace = /^(([\s\r\n\t]+)?})/g,
-      __matchValues = /(^(\s+)?:(\s+)?(.*?);)|(^(\s+):([\s\w\W]+)?)|(^([\s\w\W]+)?;)/g,
+      __matchValues = /(^(\s+)?:(\s+)?(.*?);)|(^(\s+)?:([\s\w\W]+)?)|(^([\s\w\W]+)?;)/g,
       __replaceTagName = /(<\/?(\w.*?)\s.*?>)/g,
       /* splits binds out of text */
       __matchText = /(?!\{\{\{)(?!\}\}\})(\{\{.*?\}\})/g,
