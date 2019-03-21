@@ -47,8 +47,8 @@ window.czosnek = (function(){
       __matchNodes = /(<.*?>)/g,
       
       __matchNodeBind = /(<\/?{{.*?}}.*?>)/g,
-      __matchAttrNameBind = /({{(?:(?!{{).)*?}}=".*?")/g,
-      __matchStyleAttr = /(style=".*?{{.*?}}.*?")/g,
+      __matchAttrNameBind = /({{(?:(?!{{).)*?}}=["'].*?["'])/g,
+      __matchStyleAttr = /(style=["'].*?{{.*?}}.*?["'])/g,
       __matchStyleClass = /(({([\s\r\n\t]+)?{{.[^}]*?}}([\s\r\n\t]+)?})([\s\r\n\t]+)?)$/g,
       __matchPrevProperty = /(:(\s+)?)$/g,
       __matchNextProperty = /^((\s+)?;)/g,
