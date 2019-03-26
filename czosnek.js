@@ -44,7 +44,7 @@ window.czosnek = (function(){
   
   /* regex for searching for nodes */
   var __reNodes = /(<\/.*?>)/g,
-      __matchNodes = /(<[^/].*?([^{]>))/g,
+      __matchNodes = /(<.*?([^{]>))/g,
       
       __matchNodeBind = /(<\/?{{.*?}}.*?>)/g,
       __matchAttrNameBind = /({{(?:(?!{{).)*?}}=["'].*?["'])/g,
