@@ -190,13 +190,10 @@ window.czosnek = (function(){
     /* Extra property to hold values assocated with a style or attr name bind eg {{attr}}="This is values" similiar to mapObject but gets passed to the {{attr}} bind in the event it is a function */
     this.values = (obj.values || []);
     
-    if(!this.isStyle)
-    {
-      Object.defineProperties(this, {
-        localId: setDescriptorAttribute('component-id', (obj.localId || obj.local_id), this.node),
-        nodeId: setDescriptorAttribute('node-id', (obj.nodeId || (obj.local_id + '-' + obj.node_id)), this.node)
-      });
-    }
+    Object.defineProperties(this, {
+      localId: setDescriptorAttribute('component-id', (obj.localId || obj.local_id), this.node),
+      nodeId: setDescriptorAttribute('node-id', (obj.nodeId || (obj.local_id + '-' + obj.node_id)), this.node)
+    });
   }
   
   /* ENDREGION */
@@ -1502,7 +1499,8 @@ window.czosnek = (function(){
             mapText: [item],
             type: 'insert',
             property: 'style',
-            node: node.style,
+            local: node.style,
+            node: node,
             isInlineStyle: true,
             isFullStyle: true,
             isPointer: isComponent
