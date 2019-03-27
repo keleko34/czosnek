@@ -1502,7 +1502,7 @@ window.czosnek = (function(){
             mapText: [item],
             type: 'insert',
             property: 'style',
-            node: node,
+            node: node.style,
             isInlineStyle: true,
             isFullStyle: true,
             isPointer: isComponent
@@ -1523,8 +1523,7 @@ window.czosnek = (function(){
             type: 'style',
             property: 'style',
             listener: 'style',
-            local: node,
-            localAttr: 'style',
+            local: node.style,
             node: node,
             isInlineStyle: true,
             isFullStyle: true,

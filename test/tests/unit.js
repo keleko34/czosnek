@@ -611,7 +611,7 @@ function destroy(czos)
       expect(map.mapText.length).to.equal(1);
       expect(map.isDirty).to.equal(false);
       expect(map.listener).to.equal('style');
-      expect(map.localAttr).to.equal('style');
+      expect(map.localAttr).to.equal(undefined);
       expect(map.localKey).to.equal('styles');
       expect(map.property).to.equal('style');
       expect(map.values.length).to.equal(0);
