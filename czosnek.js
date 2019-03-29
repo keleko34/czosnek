@@ -45,7 +45,7 @@ window.czosnek = (function(){
   /* regex for searching for nodes */
   var __reNodes = /(<\/.*?>)/g,
       __matchNodes = /(<.*?([^{]>))/g,
-      
+      __matchBrace = /[{]/g,
       __matchNodeBind = /(<\/?{{.*?}}.*?>)/g,
       __matchAttrNameBind = /({{(?:(?!{{).)*?}}=["'].*?["'])/g,
       __matchStyleAttr = /(style=["'].*?{{.*?}}.*?["'])/g,
@@ -73,7 +73,7 @@ window.czosnek = (function(){
       __replaceTag = /[(\<\\)\>]/g,
       __replaceNodeNameStart = /(<({{(.*?)}})(.*?)>)/g,
       __replaceNodeNameFinish = /(<\/({{(.*?)}})>)/g,
-      __matchStyles= /([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)(?=;)/g,
+      __matchStyles= /(([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)(?=[;\n\r]))|([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)$/g,
       __matchLocal = /({{>?local}})/g,
       __matchLocalStyle = /(([^};][\s\w\.]+?)?{{>?local}}(([\r\n\s\S]*?{(([\r\n\s\W\w]+?)|(.*?))(?:[^}])}(?=[\n\.\r\s]|$))|(((.[^;\r\n\t↵]*?)({{.[^}]*?}})(\s+)?)$)))/g,
       __replaceStyleValue = /(:(\s+)?(.*?);)/g,
@@ -1471,6 +1471,8 @@ window.czosnek = (function(){
   function mapStyleAttr(node, text, maps, id, nodeId, isComponent)
   {
     var styles = (text.match(__matchStyles) || [text]),
+        matched = (styles.length && styles[0].match(__matchBrace)),
+        isFullStyle = (styles.length === 1 && (matched && matched.length === 2)),
         mapText,
         mapValues,
         style,
@@ -1484,7 +1486,7 @@ window.czosnek = (function(){
         lenn,
         i = 0;
     
-    if(styles.length === 1)
+    if(isFullStyle)
     {
       item = styles[0];
       if(item.match(__matchInsert))
