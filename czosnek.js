@@ -73,7 +73,8 @@ window.czosnek = (function(){
       __replaceTag = /[(\<\\)\>]/g,
       __replaceNodeNameStart = /(<({{(.*?)}})(.*?)>)/g,
       __replaceNodeNameFinish = /(<\/({{(.*?)}})>)/g,
-      __matchStyles= /(([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)(?=[;\n\r]))|([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)$/g,
+      __matchAttr = /(([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)(?=[;\n\r]))|([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)$/g,
+      __matchStyles= /(([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)(?=[;\n\r]))|([\w{}|+\-~].*?:[\w\W{}|+\-~].*?)$|(({{.*?}})(?=[;\n\r]))|(({{.*?}}))$/g,
       __matchLocal = /({{>?local}})/g,
       __matchLocalStyle = /(([^};][\s\w\.]+?)?{{>?local}}(([\r\n\s\S]*?{(([\r\n\s\W\w]+?)|(.*?))(?:[^}])}(?=[\n\.\r\s]|$))|(((.[^;\r\n\t↵]*?)({{.[^}]*?}})(\s+)?)$)))/g,
       __replaceStyleValue = /(:(\s+)?(.*?);)/g,
@@ -1352,7 +1353,7 @@ window.czosnek = (function(){
   /* creates dyanmic map that changes the attr name */
   function mapAttrName(node, text, maps, id, nodeId, isComponent)
   {
-    var attrs = text.match(__matchStyles),
+    var attrs = text.match(__matchAttr),
         mapText,
         mapValues,
         attr,
@@ -1470,9 +1471,8 @@ window.czosnek = (function(){
   /* map style takes all styles and maps to the property */
   function mapStyleAttr(node, text, maps, id, nodeId, isComponent)
   {
-    var styles = (text.match(__matchStyles) || [text]),
-        matched = (styles.length && styles[0].match(__matchBrace)),
-        isFullStyle = (styles.length === 1 && (matched && matched.length === 2)),
+    var styles = text.match(__matchStyles),
+        isFullStyle = (styles && styles.length === 1 && styles[0].match(__matchText)),
         mapText,
         mapValues,
         style,
@@ -1537,10 +1537,17 @@ window.czosnek = (function(){
     {
       for(x;x<len;x++)
       {
-        style = styles[x].split(':');
-        title = style[0];
-        value = style[1];
-        
+        if(styles[x].indexOf(':') === -1)
+        {
+          title = styles[x];
+          value = '';
+        }
+        else
+        {
+          style = styles[x].split(':');
+          title = style[0];
+          value = style[1];
+        }
         if(title.match(__matchInsert))
         {
           titleMap = new mapObject({
@@ -1555,6 +1562,7 @@ window.czosnek = (function(){
             property: 'style',
             node: node,
             local: node.style,
+            isFullProp: (!!value),
             isInlineStyle: true,
             isPointer: isComponent
           })
@@ -1575,6 +1583,7 @@ window.czosnek = (function(){
             property: 'style',
             node: node,
             local: node.style,
+            isFullProp: (!!value),
             isInlineStyle: true,
             isPointer: isComponent
           })

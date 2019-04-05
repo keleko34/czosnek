@@ -9,7 +9,7 @@ var templates = {
   node: '<div><{{test | helper}} class="{{cool}}"><div>{{help}}</div></{{test | helper}}></div>',
   event: '<div onclick="{{click}}"></div>',
   stylesheetStyle: '{{local}} { {{setColor | randomize}}:blue; font-size:{{size | containerHeight}}px; }',
-  styleattribute: '<div style="color:{{color}};{{extra | checkTheme}}:blue;"></div>',
+  styleattribute: '<div style="color:{{color}};{{extra | checkTheme}}:blue;{{fullprop}};"></div>',
   singlestyleattribute: '<div style="{{styles | filter}}"></div>',
   attribute: '<div {{attr1}}="something" attr="{{test | check}} data" {{attr2}}="test" ></div>',
   stylesheetclassStyle: '.something {{{style}}} \r\n .something{{local}} { {{style | parseLocal}} }',
@@ -537,7 +537,7 @@ function destroy(czos)
     });
     
     it('Should contain the correct mappings', function(done){
-      expect(czos.maps.length).to.equal(2);
+      expect(czos.maps.length).to.equal(3);
       expect(czos.maps[0].key).to.equal('color');
       expect(czos.maps[1].key).to.equal('extra');
       done();
