@@ -1472,7 +1472,7 @@ window.czosnek = (function(){
   function mapStyleAttr(node, text, maps, id, nodeId, isComponent)
   {
     var styles = text.match(__matchStyles),
-        isFullStyle = (styles && styles.length === 1 && styles[0].match(__matchText)),
+        isFullStyle = (styles && styles[0].match(__matchText) && styles.length === 1),
         mapText,
         mapValues,
         style,
@@ -1548,6 +1548,7 @@ window.czosnek = (function(){
           title = style[0];
           value = style[1];
         }
+        /* First we try to match the title */
         if(title.match(__matchInsert))
         {
           titleMap = new mapObject({
@@ -1562,7 +1563,7 @@ window.czosnek = (function(){
             property: 'style',
             node: node,
             local: node.style,
-            isFullProp: (!!value),
+            isFullProp: !(value),
             isInlineStyle: true,
             isPointer: isComponent
           })
@@ -1583,7 +1584,7 @@ window.czosnek = (function(){
             property: 'style',
             node: node,
             local: node.style,
-            isFullProp: (!!value),
+            isFullProp: !(value),
             isInlineStyle: true,
             isPointer: isComponent
           })
@@ -1594,7 +1595,7 @@ window.czosnek = (function(){
         {
           titleMap = undefined;
         }
-
+        /* Then we try to match the value */
         mapText = splitText(value);
         mapValues = (titleMap ? titleMap.mapValues : maps);
         lenn = mapText.length;
