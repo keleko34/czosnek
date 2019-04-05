@@ -158,6 +158,12 @@ window.czosnek = (function(){
     /* The index that this object is in the mapText array */
     this.mapTextIndex = obj.mapTextIndex;
     
+    /* if this map is a attr name or a style name */
+    this.isProperty = obj.isProperty;
+    
+    /* if this map belongs to a attr or style name map */
+    this.isProperyValue = obj.isPropertyValue;
+    
     /* if this bind is an attribute bind */
     this.isAttr = obj.isAttr;
     
@@ -1386,7 +1392,8 @@ window.czosnek = (function(){
           type: 'insert',
           node: node,
           isAttr: true,
-          isPointer: isComponent
+          isPointer: isComponent,
+          isProperty: true
         })
         titleMap.mapText = [titleMap];
         maps.push(titleMap)
@@ -1406,7 +1413,8 @@ window.czosnek = (function(){
           isAttr: true,
           listener: 'setAttribute',
           local: node,
-          isPointer: isComponent
+          isPointer: isComponent,
+          isProperty: true
         })
         titleMap.mapText = [titleMap];
         maps.push(titleMap);
@@ -1435,7 +1443,8 @@ window.czosnek = (function(){
             listener: title,
             node: node,
             isAttr: true,
-            isPointer: isComponent
+            isPointer: isComponent,
+            isPropertyValue: true
           });
           titleMap.mapValues.push(localMap)
         }
@@ -1454,7 +1463,8 @@ window.czosnek = (function(){
             listener: title,
             node: node,
             isAttr: true,
-            isPointer: isComponent
+            isPointer: isComponent,
+            isPropertyValue: true
           });
           titleMap.mapValues.push(localMap)
         }
@@ -1565,7 +1575,8 @@ window.czosnek = (function(){
             local: node.style,
             isFullProp: !(value),
             isInlineStyle: true,
-            isPointer: isComponent
+            isPointer: isComponent,
+            isProperty: true
           })
           titleMap.mapText = [titleMap];
           maps.push(titleMap)
@@ -1586,7 +1597,8 @@ window.czosnek = (function(){
             local: node.style,
             isFullProp: !(value),
             isInlineStyle: true,
-            isPointer: isComponent
+            isPointer: isComponent,
+            isProperty: true
           })
           titleMap.mapText = [titleMap];
           maps.push(titleMap)
@@ -1620,7 +1632,8 @@ window.czosnek = (function(){
               local: node.style,
               localAttr: title,
               isInlineStyle: true,
-              isPointer: isComponent
+              isPointer: isComponent,
+              isPropertyValue: true
             })
             if(!titleMap)
             {
@@ -1649,7 +1662,8 @@ window.czosnek = (function(){
               local: node.style,
               localAttr: title,
               isInlineStyle: true,
-              isPointer: isComponent
+              isPointer: isComponent,
+              isPropertyValue: true
             })
             if(!titleMap)
             {
