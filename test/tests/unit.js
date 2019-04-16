@@ -139,7 +139,8 @@ function destroy(czos)
       var mapFirst = czos.maps[0],
           mapSecond = czos.maps[1];
       
-      expect(mapFirst.type).to.equal('insert');
+      expect(mapFirst.type).to.equal('standard');
+      expect(mapFirst.isInsert).to.equal(true);
       expect(mapFirst.mapText.length).to.equal(1);
       expect(mapFirst.isAttr).to.equal(true);
       expect(mapFirst.isDirty).to.equal(false);
@@ -149,7 +150,8 @@ function destroy(czos)
       expect(mapFirst.property).to.equal('class');
       expect(mapFirst.values.length).to.equal(0);
       
-      expect(mapSecond.type).to.equal('insert');
+      expect(mapSecond.type).to.equal('standard');
+      expect(mapSecond.isInsert).to.equal(true);
       expect(mapSecond.mapText.length).to.equal(1);
       expect(mapSecond.isDirty).to.equal(false);
       expect(mapSecond.listener).to.equal(undefined);

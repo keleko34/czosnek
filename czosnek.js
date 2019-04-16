@@ -104,8 +104,8 @@ window.czosnek = (function(){
     /* The key of the bind */
     this.key = (obj.key || (obj.isLoop ? getLoopKey(obj.text) : getKey(obj.text)));
     
-    /* SEE map types comment */
-    this.type = (this.key === 'innerHTML' ? 'insert' : obj.type);
+    /* see map types comment */
+    this.type = obj.type;
     
     /* The entire text associated with the bind */
     this.text = obj.text;
@@ -171,7 +171,7 @@ window.czosnek = (function(){
     this.isLoop = obj.isLoop;
     
     /* if this bind is a style bind */
-    this.isStyle = obj.isStyle;
+    this.isStyleSheet = obj.isStyleSheet;
     
     /* if this bind is an inline style */
     this.isInlineStyle = obj.isInlineStyle;
@@ -190,6 +190,9 @@ window.czosnek = (function(){
     
     /* if this bind is a value bind on a radio element */
     this.isRadio = (obj.isRadio !== undefined ? obj.isRadio : (!!this.isInput && ['radio','checkbox'].indexOf(this.node.type) !== -1));
+    
+    /* If the bind is meant to be inserted */
+    this.isInsert = (this.key === 'innerHTML' ? true : obj.isInsert);
     
     /* IN case its a for bind, this is the component name with it */
     this.component = (obj.component || (this.isLoop ? getLoopComponent(this.text) : undefined));
@@ -778,7 +781,8 @@ window.czosnek = (function(){
           text: item,
           mapText: mapText,
           maps: maps,
-          type: 'insert',
+          type: 'standard',
+          isInsert: true,
           property: 'textContent',
           local: node,
           localAttr: 'textContent',
@@ -895,7 +899,8 @@ window.czosnek = (function(){
                 text: item,
                 mapText: mapText,
                 maps: maps,
-                type: 'insert',
+                type: 'standard',
+                isInsert: true,
                 property: title,
                 local: attrs[x],
                 localAttr: 'value',
@@ -947,6 +952,7 @@ window.czosnek = (function(){
                 mapText: mapText,
                 maps: maps,
                 type: 'event',
+                isInsert: true,
                 property: __EventList__[event],
                 local: node,
                 localAttr: __EventList__[event],
@@ -1037,7 +1043,8 @@ window.czosnek = (function(){
               text: item,
               mapText: mapText,
               maps: maps,
-              type: 'insert',
+              type: 'pointer',
+              isInsert: true,
               property: title,
               local: attrs[x],
               localAttr: 'value',
@@ -1137,12 +1144,13 @@ window.czosnek = (function(){
           text: item,
           mapText: mapText,
           maps: mapValues,
-          type: 'insert',
+          type: 'stylesheet',
+          isInsert: true,
           property: 'innerHTML',
           local: node,
           localAttr: 'innerHTML',
           node: node,
-          isStyle: true,
+          isStyleSheet: true,
           isFullStyle: isFullStyle,
           isFullProp: isFullProp
         });
@@ -1197,7 +1205,7 @@ window.czosnek = (function(){
           local: node,
           localAttr: 'innerHTML',
           node: node,
-          isStyle: true,
+          isStyleSheet: true,
           isFullStyle: isFullStyle,
           isFullProp: isFullProp
         });
@@ -1323,7 +1331,8 @@ window.czosnek = (function(){
               text: item,
               mapText: mapText,
               maps: nodeMaps,
-              type: 'insert',
+              type: 'pointer',
+              isInsert: true,
               property: title,
               local: attrs[x],
               localAttr: 'value',
@@ -1389,7 +1398,8 @@ window.czosnek = (function(){
           text: title,
           maps: maps,
           mapText: [title],
-          type: 'insert',
+          type: 'attr',
+          isInsert: true,
           node: node,
           isAttr: true,
           isPointer: isComponent,
@@ -1438,7 +1448,8 @@ window.czosnek = (function(){
             text: item,
             mapText: mapText,
             maps: mapValues,
-            type: 'insert',
+            type: 'attr',
+            isInsert: true,
             property: title,
             listener: title,
             node: node,
@@ -1509,7 +1520,8 @@ window.czosnek = (function(){
             text: item,
             maps: maps,
             mapText: [item],
-            type: 'insert',
+            type: 'style',
+            isInsert: true,
             property: 'style',
             local: node.style,
             node: node,
@@ -1569,7 +1581,8 @@ window.czosnek = (function(){
             text: title,
             maps: maps,
             mapText: [title],
-            type: 'insert',
+            type: 'style',
+            isInsert: true,
             property: 'style',
             node: node,
             local: node.style,
@@ -1628,6 +1641,7 @@ window.czosnek = (function(){
               maps: mapValues,
               node: node,
               type: 'style',
+              isInsert: true,
               property: title,
               local: node.style,
               localAttr: title,
