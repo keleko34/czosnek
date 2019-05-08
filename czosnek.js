@@ -815,10 +815,10 @@ window.czosnek = (function(){
         });
             
         maps.push(localmap);
-        mapText[x] = localmap;
+        mapText[x] = maps[(maps.length - 1)];
 
         /* LOCAL MAPS */
-        extensions.localmaps = localmap;
+        extensions.localmaps = maps[(maps.length - 1)];
       }
       
       /* MATCH TEXT TYPE */
@@ -841,10 +841,10 @@ window.czosnek = (function(){
         });
             
         maps.push(localmap);
-        mapText[x] = localmap;
+        mapText[x] = maps[(maps.length - 1)];
 
         /* LOCAL MAPS */
-        extensions.localmaps = localmap;
+        extensions.localmaps = maps[(maps.length - 1)];
       }
     }
   }
@@ -929,10 +929,10 @@ window.czosnek = (function(){
               });
 
               maps.push(localmap);
-              mapText[i] = localmap;
+              mapText[i] = maps[(maps.length - 1)];
 
               /* LOCAL MAPS */
-              extensions.localmaps = localmap;
+              extensions.localmaps = maps[(maps.length - 1)];
             }
           }
         }
@@ -981,10 +981,10 @@ window.czosnek = (function(){
                 isEvent: true
               })
               maps.push(localmap);
-              mapText[i] = localmap;
+              mapText[i] = maps[(maps.length - 1)];
               
               /* LOCAL MAPS */
-              extensions.localmaps = localmap;
+              extensions.localmaps = maps[(maps.length - 1)];
               node.removeAttribute(title);
             }
           }
@@ -1074,11 +1074,11 @@ window.czosnek = (function(){
             });
 
             maps.push(localmap);
-            mapText[i] = localmap;
+            mapText[i] = maps[(maps.length - 1)];
 
             /* LOCAL MAPS */
-            extensions.localmaps = localmap;
-            extensions.pointers.push(localmap);
+            extensions.localmaps = maps[(maps.length - 1)];
+            extensions.pointers.push(maps[(maps.length - 1)]);
             extensions.innerHTML = node.childNodes;
           }
         }
@@ -1161,19 +1161,19 @@ window.czosnek = (function(){
           len = mapText.length;
           x -= 1;
           titleMap.mapValues.push(localmap);
-          titleMap.values.push(localmap);
+          titleMap.values.push(titleMap.mapValues[(titleMap.mapValues.length - 1)]);
         }
         else if(!titleMap && mapText[x + 1] && mapText[x + 1].indexOf(':') === 0)
         {
           maps.push(localmap);
-          mapText[x] = localmap;
-          titleMap = mapText[x];
+          mapText[x] = maps[(maps.length - 1)];
+          titleMap = maps[(maps.length - 1)];
           outputText[x] = item;
         }
         else
         {
           maps.push(localmap);
-          mapText[x] = localmap;
+          mapText[x] = maps[(maps.length - 1)];
           outputText[x] = item;
         }
       }
@@ -1216,23 +1216,23 @@ window.czosnek = (function(){
           len = mapText.length;
           x -= 1;
           titleMap.mapValues.push(localmap);
-          titleMap.values.push(localmap);
+          titleMap.values.push(titleMap.mapValues[(titleMap.mapValues.length - 1)]);
         }
         else if(!titleMap && nextIsString && mapText[x + 1].indexOf(':') === 0)
         {
           maps.push(localmap);
-          mapText[x] = localmap;
-          titleMap = mapText[x];
+          mapText[x] = maps[(maps.length - 1)];
+          titleMap = maps[(maps.length - 1)];
           /* LOCAL MAPS */
-          extensions.localmaps = localmap;
+          extensions.localmaps = maps[(maps.length - 1)];
           outputText[x] = item;
         }
         else
         {
           maps.push(localmap);
-          mapText[x] = localmap;
+          mapText[x] = maps[(maps.length - 1)];
           /* LOCAL MAPS */
-          extensions.localmaps = localmap;
+          extensions.localmaps = maps[(maps.length - 1)];
           outputText[x] = item;
         }
       }
@@ -1304,6 +1304,7 @@ window.czosnek = (function(){
           values: nodeMaps
         })
         maps.push(local);
+        mapText[0] = maps[(maps.length - 1)];
       }
       else if(title === '__kaleoattrsbind__')
       {
@@ -1405,8 +1406,8 @@ window.czosnek = (function(){
           isPointer: isComponent,
           isProperty: true
         })
-        titleMap.mapText = [titleMap];
         maps.push(titleMap)
+        titleMap.mapText = [maps[(maps.length - 1)]];
       }
       else if(title.match(__matchText))
       {
@@ -1426,8 +1427,8 @@ window.czosnek = (function(){
           isPointer: isComponent,
           isProperty: true
         })
-        titleMap.mapText = [titleMap];
         maps.push(titleMap);
+        titleMap.mapText = [maps[(maps.length - 1)]];
       }
       
       mapText = splitText(value);
@@ -1529,8 +1530,8 @@ window.czosnek = (function(){
             isFullStyle: true,
             isPointer: isComponent
           })
-          localMap.mapText = [localMap];
           maps.push(localMap)
+          localMap.mapText = [maps[(maps.length - 1)]];
       }
       else if(item.match(__matchText))
       {
@@ -1551,8 +1552,8 @@ window.czosnek = (function(){
             isFullStyle: true,
             isPointer: isComponent
           })
-          localMap.mapText = [localMap];
           maps.push(localMap)
+          localMap.mapText = [maps[(maps.length - 1)]];
       }
     }
     else
@@ -1591,8 +1592,8 @@ window.czosnek = (function(){
             isPointer: isComponent,
             isProperty: true
           })
-          titleMap.mapText = [titleMap];
           maps.push(titleMap)
+          titleMap.mapText = [maps[(maps.length - 1)]];
         }
         else if(title.match(__matchText))
         {
@@ -1613,8 +1614,8 @@ window.czosnek = (function(){
             isPointer: isComponent,
             isProperty: true
           })
-          titleMap.mapText = [titleMap];
           maps.push(titleMap)
+          titleMap.mapText = [maps[(maps.length - 1)]];
         }
         else
         {
@@ -1651,8 +1652,8 @@ window.czosnek = (function(){
             })
             if(!titleMap)
             {
-              localMap.mapText = mapText;
               maps.push(localMap);
+              localMap.mapText = [maps[(maps.length - 1)]];
             }
             else
             {
@@ -1681,8 +1682,8 @@ window.czosnek = (function(){
             })
             if(!titleMap)
             {
-              localMap.mapText = mapText;
               maps.push(localMap);
+              localMap.mapText = [maps[(maps.length - 1)]];
             }
             else
             {
