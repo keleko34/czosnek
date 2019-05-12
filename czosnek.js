@@ -194,6 +194,8 @@ window.czosnek = (function(){
     /* If the bind is meant to be inserted */
     this.isInsert = (this.key === 'innerHTML' ? true : obj.isInsert);
     
+    this.isGlobal = obj.isGlobal;
+    
     /* IN case its a for bind, this is the component name with it */
     this.component = (obj.component || (this.isLoop ? getLoopComponent(this.text) : undefined));
     
@@ -512,42 +514,6 @@ window.czosnek = (function(){
     return wrapper.children[0];
   }
   
-  function destructMap(map)
-  {
-    if(!map.maps) return console.error(new Error('You can not destruct a map that has already been destructed'));
-    map.maps.splice(map.mapIndex, 1);
-    
-    var len = map.maps.length,
-        x = 0;
-    for(x;x<len;x++)
-    {
-      map.maps[x].mapIndex = x;
-    }
-    
-    if(map.mapTextIndex !== -1) map.mapText[map.mapTextIndex] = '';
-    
-    if(map.mapValues.length)
-    {
-      while(map.mapValues[0])
-      {
-        destructMap(map.mapValues[0]);
-      }
-    }
-    
-    Object.defineProperties(map, {
-      node: setDescriptor(null, true, true, false),
-      value: setDescriptor(null, true, true, false),
-      values: setDescriptor([], true, true, false),
-      local: setDescriptor(null, true, true, false),
-      maps: setDescriptor(null, true, true, false),
-      mapText: setDescriptor(null, true, true, false),
-      datalistener: setDescriptor(null, true, true, false),
-      domlistener: setDescriptor(null, true, true, false),
-      funclistener: setDescriptor(null, true, true, false),
-      data: setDescriptor(null, true, true, false)
-    })
-  }
-  
   function destruct(component)
   {
     var mapComponent = (component || this);
@@ -560,21 +526,14 @@ window.czosnek = (function(){
     
     while(mapComponent.maps[0])
     {
-      destructMap(mapComponent.maps[0]);
+      mapComponent.maps.splice(0, 1);
     }
+    /* May need to destruct __CzosnekExtensions__ here as well */
     if(!len)
     {
       removeComponentStyles(mapComponent.title);
     }
     return this;
-  }
-  
-  function copyMapToMaps(map, maps)
-  {
-    var copy = new mapObject(map);
-    copy.maps = maps;
-    copy.mapIndex = maps.length;
-    maps.push(copy)
   }
   
   /* ENDREGION */
@@ -714,7 +673,8 @@ window.czosnek = (function(){
     id = (id || uuid());
     if(!node.__CzosnekExtensions__) Object.defineProperty(node, '__CzosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
     
-    var localmaps = node.__CzosnekExtensions__.localmaps;
+    var localmaps = node.__CzosnekExtensions__.localmaps,
+        nodeId = node.getAttribute('node-id');
     
     if(localmaps && localmaps.length)
     {
@@ -723,12 +683,12 @@ window.czosnek = (function(){
       
       for(x;x<len;x++)
       {
-        copyMapToMaps(localmaps[x], maps);
+        maps.push(localmaps[x])
       }
     }
     else
     {
-      mapStyleNode(node, maps, id);
+      mapStyleNode(node, maps, id, nodeId, true);
     }
     return maps;
   }
@@ -1086,7 +1046,7 @@ window.czosnek = (function(){
     }
   }
   
-  function mapStyleNode(node, maps, id, localid)
+  function mapStyleNode(node, maps, id, localid, isGlobal)
   {
     if(!node.textContent.match(__matchText)) return;
     
@@ -1152,7 +1112,8 @@ window.czosnek = (function(){
           node: node,
           isStyleSheet: true,
           isFullStyle: isFullStyle,
-          isFullProp: isFullProp
+          isFullProp: isFullProp,
+          isGlobal: isGlobal
         });
         
         if(titleMap)
@@ -1207,7 +1168,8 @@ window.czosnek = (function(){
           node: node,
           isStyleSheet: true,
           isFullStyle: isFullStyle,
-          isFullProp: isFullProp
+          isFullProp: isFullProp,
+          isGlobal: isGlobal
         });
         
         if(titleMap)
