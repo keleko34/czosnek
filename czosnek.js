@@ -202,10 +202,12 @@ window.czosnek = (function(){
     /* Extra property to hold values assocated with a style or attr name bind eg {{attr}}="This is values" similiar to mapObject but gets passed to the {{attr}} bind in the event it is a function */
     this.values = (obj.values || []);
     
-    Object.defineProperties(this, {
-      localId: setDescriptorAttribute('component-id', (obj.localId || obj.local_id), this.node),
-      nodeId: setDescriptorAttribute('node-id', (obj.nodeId || (obj.local_id + '-' + obj.node_id)), this.node)
-    });
+	if(!this.isGlobal)
+	{
+		Object.defineProperties(this, {
+		  nodeId: setDescriptorAttribute('node-id', (obj.nodeId || (obj.local_id + '-' + obj.node_id)), this.node)
+		});
+	}
   }
   
   /* ENDREGION */
@@ -494,7 +496,7 @@ window.czosnek = (function(){
     if(!__templates[title]) return console.error("ERR: Component "+title+" does not exist, make sure to create it", new Error().stack);
     
     var styleTemplates = __styles[title],
-        mainStyle = (document.head.querySelector('style[component="'+ title +'"]') || createStyleNode(title, styleTemplates[0])),
+        mainStyle = (document.head.querySelector('style[component="'+ title +'"]') || createStyleNode(title, styleTemplates[0], undefined, true)),
         localStyle = createStyleNode(title, styleTemplates[1], id);
     
     return [mainStyle, localStyle];
@@ -519,7 +521,7 @@ window.czosnek = (function(){
     var mapComponent = (component || this);
     if(!mapComponent.maps) return this;
     
-    var components = document.body.querySelector('[component="'+mapComponent.title+'"]'),
+    var components = document.body.querySelectorAll('[component="'+mapComponent.title+'"]'),
         len = (components || []).length;
     
     __registered__.splice(__registered__.indexOf(mapComponent), 1);
@@ -636,8 +638,7 @@ window.czosnek = (function(){
         break;
       /* Standard Element */
       default:
-        node.setAttribute('component-id', id);
-        node.setAttribute('node-id', uuid())
+        node.setAttribute('node-id', (id + '-' + uuid()))
         if(node.nodeName === 'KALEOREPLACENODE__')
         {
           mapMapNode(node, parent, maps, id);
@@ -668,13 +669,11 @@ window.czosnek = (function(){
     return maps;
   }
   
-  function createGlobalStyleMaps(node, maps, id)
+  function createGlobalStyleMaps(node, maps)
   {
-    id = (id || uuid());
     if(!node.__CzosnekExtensions__) Object.defineProperty(node, '__CzosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
     
-    var localmaps = node.__CzosnekExtensions__.localmaps,
-        nodeId = node.getAttribute('node-id');
+    var localmaps = node.__CzosnekExtensions__.localmaps;
     
     if(localmaps && localmaps.length)
     {
@@ -688,15 +687,15 @@ window.czosnek = (function(){
     }
     else
     {
-      mapStyleNode(node, maps, id, nodeId, true);
+      mapStyleNode(node, maps, undefined, undefined, true);
     }
     return maps;
   }
   
   function createLocalStyleMaps(node, maps, id)
   {
-    id = (id || uuid());
     if(!node.__CzosnekExtensions__) Object.defineProperty(node, '__CzosnekExtensions__', setDescriptor(new attachExtensions(node, parent, maps)));
+	node.setAttribute('component-id', id);
     mapStyleNode(node, maps, id, uuid());
     return maps;
   }
@@ -707,7 +706,6 @@ window.czosnek = (function(){
     styleNode.type = 'text/css';
     styleNode.setAttribute('component', title);
     styleNode.textContent = template;
-    if(id) styleNode.setAttribute('component-id', id);
     document.head.appendChild(styleNode);
     
     return styleNode;
@@ -1121,11 +1119,13 @@ window.czosnek = (function(){
           mapText.splice(x, 1);
           len = mapText.length;
           x -= 1;
+		  localmap.isProperyValue = true;
           titleMap.mapValues.push(localmap);
           titleMap.values.push(titleMap.mapValues[(titleMap.mapValues.length - 1)]);
         }
         else if(!titleMap && mapText[x + 1] && mapText[x + 1].indexOf(':') === 0)
         {
+		  localmap.isProperty = true;
           maps.push(localmap);
           mapText[x] = maps[(maps.length - 1)];
           titleMap = maps[(maps.length - 1)];
@@ -1177,11 +1177,13 @@ window.czosnek = (function(){
           mapText.splice(x, 1);
           len = mapText.length;
           x -= 1;
+		  localmap.isProperyValue = true;
           titleMap.mapValues.push(localmap);
           titleMap.values.push(titleMap.mapValues[(titleMap.mapValues.length - 1)]);
         }
         else if(!titleMap && nextIsString && mapText[x + 1].indexOf(':') === 0)
         {
+		  localmap.isProperty = true;
           maps.push(localmap);
           mapText[x] = maps[(maps.length - 1)];
           titleMap = maps[(maps.length - 1)];
@@ -1687,6 +1689,8 @@ window.czosnek = (function(){
     
     Object.defineProperty(this.component, '__CzosnekRoot__', setDescriptor(this));
     
+	this.component.setAttribute('component-id', this.id);
+	
     __registered__.push(this);
   }
   
