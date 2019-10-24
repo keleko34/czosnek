@@ -1,6 +1,6 @@
 {
   "name": "czosnek",
-  "version": "1.5.31",
+  "version": "1.5.32",
   "description": "An html and css template mapping library for bindings",
   "main": "czosnek.js",
   "scripts": {
